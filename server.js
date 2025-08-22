@@ -3,20 +3,17 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const path = require("path");
 const cors = require("cors");
+require("dotenv").config(); // 加載環境變數
 
 // 引入所有需要的路由和中間件
 const authMiddleware = require("./authMiddleware");
 const userRoutes = require("./userRoutes");
 const adminRoutes = require("./adminRoutes");
 const quoteRoutes = require("./quoteRoutes");
-const customerRoutes = require("./customerRoutes"); // 新增會員路由
+const customerRoutes = require("./customerRoutes"); // 會員路由
 
 const app = express();
 const prisma = new PrismaClient();
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
 
 // Middleware
 app.use(cors());
@@ -39,8 +36,8 @@ app.post("/api/orders", async (req, res) => {
       phone,
       idNumber,
       calculationResult,
-      additionalServices, // 新增：加值服務資料
-      customerToken // 新增：如果是會員下單，會帶入 token
+      additionalServices,
+      customerToken
     } = req.body;
 
     if (!recipientName || !address || !phone || !calculationResult) {
@@ -55,7 +52,7 @@ app.post("/api/orders", async (req, res) => {
         const decoded = jwt.verify(customerToken, process.env.JWT_SECRET);
         if (decoded.type === 'customer') {
           customerId = decoded.id;
-          console.log("會員下單，ID:", customerId); // 除錯用
+          console.log("會員下單，ID:", customerId);
         }
       } catch (error) {
         console.log("會員 token 無效，以非會員身份下單:", error.message);
@@ -84,13 +81,13 @@ app.post("/api/orders", async (req, res) => {
         address,
         phone,
         idNumber,
-        calculationResult: JSON.stringify(cleanCalculationResult), // 轉換為 JSON 字串
-        additionalServices: additionalServices ? JSON.stringify(additionalServices) : null, // 儲存加值服務資料
-        customerId // 如果是會員下單，會關聯到會員 ID
+        calculationResult: JSON.stringify(cleanCalculationResult),
+        additionalServices: additionalServices ? JSON.stringify(additionalServices) : null,
+        customerId
       },
     });
     
-    // 如果有選擇加值服務，記錄到 console（方便管理員查看）
+    // 如果有選擇加值服務，記錄到 console
     if (additionalServices && (additionalServices.carryUpstairs?.needed || additionalServices.assembly?.needed)) {
       console.log(`訂單 ${newOrder.id} 包含加值服務：`);
       if (additionalServices.carryUpstairs?.needed) {
@@ -112,15 +109,19 @@ app.post("/api/orders", async (req, res) => {
 app.get("/quote.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "quote.html"));
 });
+
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
+
 app.get("/register.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "register.html"));
 });
+
 app.get("/login.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
+
 app.get("/customer.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "customer.html"));
 });
@@ -130,9 +131,21 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 啟動伺服器 - 重要！使用環境變數 PORT
+// 錯誤處理中間件
+app.use((err, req, res, next) => {
+  console.error("伺服器錯誤:", err.stack);
+  res.status(500).json({ error: "伺服器內部錯誤" });
+});
+
+// 啟動伺服器 - 只有一個 app.listen！
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`伺服器正在 port ${PORT} 上運行`);
-    console.log(`環境: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`伺服器正在 port ${PORT} 上運行`);
+  console.log(`環境: ${process.env.NODE_ENV || 'development'}`);
+  
+  if (process.env.NODE_ENV === 'production') {
+    console.log('生產環境已啟動');
+  } else {
+    console.log(`本地訪問: http://localhost:${PORT}`);
+  }
 });
