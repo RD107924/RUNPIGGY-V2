@@ -130,6 +130,9 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`伺服器正在 http://localhost:${PORT} 上運行`);
+// 啟動伺服器 - 重要！使用環境變數 PORT
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`伺服器正在 port ${PORT} 上運行`);
+    console.log(`環境: ${process.env.NODE_ENV || 'development'}`);
 });
