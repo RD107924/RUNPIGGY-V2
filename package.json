@@ -1,17 +1,28 @@
 {
-  "name": "piggy-calculator-pro",
+  "name": "runpiggy-v2",
   "version": "1.0.0",
-  "description": "",
+  "description": "小跑豬運輸計算系統",
   "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "build": "prisma generate && prisma migrate deploy",
+    "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js"
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "seed": "node prisma/seed.js",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
-  "keywords": [],
-  "author": "",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": ["運輸", "計算器", "物流", "小跑豬"],
+  "author": "RD107924",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.22.0",

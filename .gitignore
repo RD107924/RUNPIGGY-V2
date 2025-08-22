@@ -1,3 +1,7 @@
-# 忽略 node_modules 資料夾和 .env 檔案
-node_modules
+node_modules/
 .env
+.env.local
+dist/
+build/
+*.log
+.DS_Store
