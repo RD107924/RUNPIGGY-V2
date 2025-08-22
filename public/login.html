@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>管理後台登入</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="calculator-container" style="max-width: 500px">
+      <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+      <h1>管理後台登入</h1>
+      <form id="loginForm">
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="username">帳號</label>
+          <input type="text" id="username" required />
+        </div>
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="password">密碼</label>
+          <input type="password" id="password" required />
+        </div>
+        <button type="submit" class="btn btn-calculate" style="width: 100%">
+          登入
+        </button>
+      </form>
+      <div
+        id="loginMessage"
+        style="margin-top: 15px; text-align: center; color: red"
+      ></div>
+    </div>
+    <script src="login.js"></script>
+  </body>
+</html>

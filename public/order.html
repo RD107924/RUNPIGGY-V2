@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>填寫收件資料 - 小跑豬專業版試算器</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .service-section {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      
+      .service-section h3 {
+        color: #1a73e8;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+      }
+      
+      .service-option {
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+      }
+      
+      .service-checkbox {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      
+      .service-checkbox input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        cursor: pointer;
+      }
+      
+      .service-checkbox label {
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #333;
+      }
+      
+      .service-details {
+        display: none;
+        margin-top: 15px;
+        padding: 15px;
+        background-color: #e9f5ff;
+        border-radius: 5px;
+        animation: slideDown 0.3s ease-out;
+      }
+      
+      .service-details.active {
+        display: block;
+      }
+      
+      .detail-group {
+        margin-bottom: 15px;
+      }
+      
+      .detail-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #666;
+        font-weight: normal;
+      }
+      
+      .detail-group input[type="number"],
+      .detail-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+      
+      .radio-group {
+        display: flex;
+        gap: 20px;
+        margin-top: 5px;
+      }
+      
+      .radio-group label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+      
+      .radio-group input[type="radio"] {
+        margin-right: 5px;
+        cursor: pointer;
+      }
+      
+      .service-note {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+        font-size: 0.9em;
+      }
+      
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .price-notice {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+        border-left: 4px solid #0c5460;
+      }
+      
+      .price-notice strong {
+        display: block;
+        margin-bottom: 5px;
+      }
+      
+      /* 響應式設計 */
+      @media (max-width: 768px) {
+        .service-section {
+          padding: 15px;
+        }
+        
+        .radio-group {
+          flex-direction: column;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="calculator-container">
+      <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+      <h1>填寫台灣收件資料</h1>
+      
+      <form id="orderForm">
+        <!-- 基本收件資料 -->
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="recipientName">收件人姓名 (必填)</label>
+          <input type="text" id="recipientName" required />
+        </div>
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="address">派送地址 (必填)</label>
+          <input type="text" id="address" required />
+        </div>
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="phone">聯絡電話 (必填)</label>
+          <input type="tel" id="phone" required />
+        </div>
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="idNumber">身分證字號 (選填，清關備查用)</label>
+          <input type="text" id="idNumber" />
+        </div>
+        
+        <!-- 加值服務區 -->
+        <div class="service-section">
+          <h3>📦 加值服務選項</h3>
+          
+          <!-- 搬運上樓服務 -->
+          <div class="service-option">
+            <div class="service-checkbox">
+              <input type="checkbox" id="needCarryUpstairs" onchange="toggleCarryDetails()">
+              <label for="needCarryUpstairs">需要搬運上樓服務（客服另行報價）</label>
+            </div>
+            
+            <div id="carryDetails" class="service-details">
+              <div class="detail-group">
+                <label for="floorNumber">請問需要搬運到幾樓？</label>
+                <input type="number" id="floorNumber" min="1" max="30" placeholder="請輸入樓層數">
+              </div>
+              
+              <div class="detail-group">
+                <label>是否有電梯？</label>
+                <div class="radio-group">
+                  <label>
+                    <input type="radio" name="hasElevator" value="yes"> 有電梯
+                  </label>
+                  <label>
+                    <input type="radio" name="hasElevator" value="no"> 無電梯
+                  </label>
+                </div>
+              </div>
+              
+              <div class="service-note">
+                💡 提醒：搬運費用會根據樓層、是否有電梯、貨物重量體積等因素計算，客服會另行報價。
+              </div>
+            </div>
+          </div>
+          
+          <!-- 組裝服務 -->
+          <div class="service-option">
+            <div class="service-checkbox">
+              <input type="checkbox" id="needAssembly" onchange="toggleAssemblyDetails()">
+              <label for="needAssembly">需要組裝服務（客服另行報價）</label>
+            </div>
+            
+            <div id="assemblyDetails" class="service-details">
+              <div class="detail-group">
+                <label for="assemblyItems">請描述需要組裝的項目（例如：床架、衣櫃、書桌等）</label>
+                <textarea 
+                  id="assemblyItems" 
+                  rows="3" 
+                  placeholder="請詳細說明需要組裝的家具項目..."
+                  style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; resize: vertical;"
+                ></textarea>
+              </div>
+              
+              <div class="service-note">
+                💡 提醒：組裝費用會根據家具類型、複雜度、數量等因素計算，客服會另行報價。
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 價格提醒 -->
+        <div class="price-notice">
+          <strong>📌 重要提醒：</strong>
+          加值服務（搬運上樓、組裝）的費用不包含在運費試算中，將由客服人員根據實際情況另行報價。
+        </div>
+        
+        <button type="submit" class="btn btn-calculate" style="width: 100%">
+          確認送出訂單
+        </button>
+      </form>
+      
+      <div
+        id="formMessage"
+        style="margin-top: 20px; text-align: center; font-size: 1.1em"
+      ></div>
+    </div>
+    
+    <script>
+      // 切換搬運詳情顯示
+      function toggleCarryDetails() {
+        const checkbox = document.getElementById('needCarryUpstairs');
+        const details = document.getElementById('carryDetails');
+        
+        if (checkbox.checked) {
+          details.classList.add('active');
+          // 設置預設值
+          document.getElementById('floorNumber').required = true;
+        } else {
+          details.classList.remove('active');
+          document.getElementById('floorNumber').required = false;
+          // 清空資料
+          document.getElementById('floorNumber').value = '';
+          const elevatorRadios = document.getElementsByName('hasElevator');
+          elevatorRadios.forEach(radio => radio.checked = false);
+        }
+      }
+      
+      // 切換組裝詳情顯示
+      function toggleAssemblyDetails() {
+        const checkbox = document.getElementById('needAssembly');
+        const details = document.getElementById('assemblyDetails');
+        
+        if (checkbox.checked) {
+          details.classList.add('active');
+        } else {
+          details.classList.remove('active');
+          // 清空資料
+          document.getElementById('assemblyItems').value = '';
+        }
+      }
+    </script>
+    
+    <!-- 原有的 order.js -->
+    <script src="order.js"></script>
+  </body>
+</html>
