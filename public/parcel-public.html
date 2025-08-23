@@ -881,7 +881,7 @@
         }
       });
 
-      // 提交表單
+      // 提交表單 - 智能版本（自動判斷是否有圖片）
       document
         .getElementById("submitForm")
         .addEventListener("submit", async (e) => {
@@ -900,87 +900,179 @@
             return;
           }
 
-          // 準備資料（使用 JSON 格式而不是 FormData）
-          const requestData = {
-            trackingNumber: trackingNumber,
-            logisticsCompany: document.getElementById("logisticsCompany").value,
-            productName: productName,
-            productLink: document.getElementById("productLink").value,
-            quantity: document.getElementById("quantity").value || "1",
-            note: document.getElementById("note").value,
-          };
+          // 判斷是否有圖片要上傳
+          const hasImages = selectedImages.length > 0;
+          console.log(
+            "是否有圖片:",
+            hasImages,
+            "圖片數量:",
+            selectedImages.length
+          );
 
-          // 訪客資訊（如果是訪客模式）
-          if (selectedMode === "guest") {
-            const guestName = document.getElementById("guestName").value.trim();
-            const guestEmail = document
-              .getElementById("guestEmail")
-              .value.trim();
-            const guestPhone = document
-              .getElementById("guestPhone")
-              .value.trim();
+          if (hasImages) {
+            // ===== 有圖片：使用 FormData =====
+            console.log("使用 FormData 提交（包含圖片）");
+            const formData = new FormData();
 
-            if (!guestName || !guestEmail || !guestPhone) {
-              showMessage("請填寫完整的聯絡資訊", "error");
-              return;
-            }
+            // 添加文字欄位
+            formData.append("trackingNumber", trackingNumber);
+            formData.append(
+              "logisticsCompany",
+              document.getElementById("logisticsCompany").value
+            );
+            formData.append("productName", productName);
+            formData.append(
+              "productLink",
+              document.getElementById("productLink").value
+            );
+            formData.append(
+              "quantity",
+              document.getElementById("quantity").value || "1"
+            );
+            formData.append("note", document.getElementById("note").value);
 
-            requestData.guestName = guestName;
-            requestData.guestEmail = guestEmail;
-            requestData.guestPhone = guestPhone;
-          }
+            // 訪客資訊
+            if (selectedMode === "guest") {
+              const guestName = document
+                .getElementById("guestName")
+                .value.trim();
+              const guestEmail = document
+                .getElementById("guestEmail")
+                .value.trim();
+              const guestPhone = document
+                .getElementById("guestPhone")
+                .value.trim();
 
-          // 暫時註解掉圖片上傳部分
-          // 等 JSON 版本正常運作後再實作
-          /*
-          selectedImages.forEach((image) => {
-            formData.append("images", image);
-          });
-          */
-
-          try {
-            // 設定請求標頭
-            const headers = {
-              "Content-Type": "application/json", // 重要：設定為 JSON
-            };
-
-            if (selectedMode === "member" && customerToken) {
-              headers["Authorization"] = `Bearer ${customerToken}`;
-            }
-
-            console.log("發送資料:", requestData); // 除錯用
-
-            // 注意：改為調用 /create-json 而不是 /create
-            const response = await fetch(`${API_BASE}/create-json`, {
-              method: "POST",
-              headers: headers,
-              body: JSON.stringify(requestData), // 使用 JSON.stringify 而不是 FormData
-            });
-
-            const data = await response.json();
-            console.log("回應資料:", data); // 除錯用
-
-            if (response.ok) {
-              showMessage("包裹預報成功！", "success");
-
-              // 如果是訪客，顯示查詢碼
-              if (data.isGuest && data.queryCode) {
-                showQueryCode(data.queryCode);
+              if (!guestName || !guestEmail || !guestPhone) {
+                showMessage("請填寫完整的聯絡資訊", "error");
+                return;
               }
 
-              // 重置表單
-              setTimeout(() => {
-                resetForm();
-                if (selectedMode === "member") {
-                  window.location.href = "/parcel.html";
-                }
-              }, 2000);
-            } else {
-              showMessage(data.error || "預報失敗", "error");
+              formData.append("guestName", guestName);
+              formData.append("guestEmail", guestEmail);
+              formData.append("guestPhone", guestPhone);
             }
-          } catch (error) {
-            console.error("提交錯誤:", error);
-            showMessage("網路錯誤，請稍後再試", "error");
+
+            // 添加圖片
+            selectedImages.forEach((image) => {
+              formData.append("images", image);
+            });
+
+            try {
+              const headers = {};
+              // 重要：FormData 不需要設定 Content-Type，瀏覽器會自動設定
+
+              if (selectedMode === "member" && customerToken) {
+                headers["Authorization"] = `Bearer ${customerToken}`;
+              }
+
+              console.log("發送包含圖片的請求到 /create-with-images");
+
+              // 使用包含圖片的端點
+              const response = await fetch(`${API_BASE}/create-with-images`, {
+                method: "POST",
+                headers: headers,
+                body: formData,
+              });
+
+              const data = await response.json();
+              console.log("回應資料:", data);
+
+              if (response.ok) {
+                showMessage("包裹預報成功！（含圖片）", "success");
+
+                if (data.isGuest && data.queryCode) {
+                  showQueryCode(data.queryCode);
+                }
+
+                setTimeout(() => {
+                  resetForm();
+                  if (selectedMode === "member") {
+                    window.location.href = "/parcel.html";
+                  }
+                }, 2000);
+              } else {
+                showMessage(data.error || "預報失敗", "error");
+              }
+            } catch (error) {
+              console.error("提交錯誤:", error);
+              showMessage("網路錯誤，請稍後再試", "error");
+            }
+          } else {
+            // ===== 沒有圖片：使用 JSON =====
+            console.log("使用 JSON 提交（無圖片）");
+            const requestData = {
+              trackingNumber: trackingNumber,
+              logisticsCompany:
+                document.getElementById("logisticsCompany").value,
+              productName: productName,
+              productLink: document.getElementById("productLink").value,
+              quantity: document.getElementById("quantity").value || "1",
+              note: document.getElementById("note").value,
+            };
+
+            // 訪客資訊
+            if (selectedMode === "guest") {
+              const guestName = document
+                .getElementById("guestName")
+                .value.trim();
+              const guestEmail = document
+                .getElementById("guestEmail")
+                .value.trim();
+              const guestPhone = document
+                .getElementById("guestPhone")
+                .value.trim();
+
+              if (!guestName || !guestEmail || !guestPhone) {
+                showMessage("請填寫完整的聯絡資訊", "error");
+                return;
+              }
+
+              requestData.guestName = guestName;
+              requestData.guestEmail = guestEmail;
+              requestData.guestPhone = guestPhone;
+            }
+
+            try {
+              const headers = {
+                "Content-Type": "application/json",
+              };
+
+              if (selectedMode === "member" && customerToken) {
+                headers["Authorization"] = `Bearer ${customerToken}`;
+              }
+
+              console.log("發送 JSON 資料到 /create-json:", requestData);
+
+              const response = await fetch(`${API_BASE}/create-json`, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify(requestData),
+              });
+
+              const data = await response.json();
+              console.log("回應資料:", data);
+
+              if (response.ok) {
+                showMessage("包裹預報成功！", "success");
+
+                if (data.isGuest && data.queryCode) {
+                  showQueryCode(data.queryCode);
+                }
+
+                setTimeout(() => {
+                  resetForm();
+                  if (selectedMode === "member") {
+                    window.location.href = "/parcel.html";
+                  }
+                }, 2000);
+              } else {
+                showMessage(data.error || "預報失敗", "error");
+              }
+            } catch (error) {
+              console.error("提交錯誤:", error);
+              showMessage("網路錯誤，請稍後再試", "error");
+            }
           }
         });
 
