@@ -101,9 +101,9 @@ model ParcelNotification {
   note              String?
   status            String   @default("PENDING") // PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
   
-  // 會員關聯（選填）
+  // 會員關聯（選填）- 修正：添加關聯名稱
   customerId        String?
-  customer          Customer? @relation(fields: [customerId], references: [id])
+  customer          Customer? @relation("CustomerParcels", fields: [customerId], references: [id])
   
   // 非會員資訊（新增欄位）
   guestEmail        String?  // 非會員的電子郵件
@@ -125,4 +125,5 @@ model ParcelNotification {
   @@index([status])
   @@index([guestEmail])
   @@index([queryCode])
+  @@map("parcel_notifications")
 }
