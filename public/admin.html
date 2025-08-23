@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>訂單管理後台</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="calculator-container" style="max-width: 1200px">
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        "
+      >
+        <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+        <h1>訂單管理儀表板</h1>
+        <div>
+          <a
+            href="/register.html"
+            class="btn btn-add"
+            style="text-decoration: none"
+            >新增員工</a
+          >
+          <button
+            id="logoutBtn"
+            class="btn"
+            style="background-color: #7f8c8d; color: white"
+          >
+            登出
+          </button>
+        </div>
+      </div>
+
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <h4>今日新增訂單</h4>
+          <p id="stats-today">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>待處理訂單</h4>
+          <p id="stats-pending">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>本月總訂單</h4>
+          <p id="stats-month">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>員工人數</h4>
+          <p id="stats-users">0</p>
+        </div>
+      </div>
+
+      <div class="filters">
+        <select id="filter-status">
+          <option value="">所有進度</option>
+        </select>
+        <select id="filter-user">
+          <option value="">所有負責人</option>
+        </select>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="搜尋姓名/電話/暱稱..."
+        />
+      </div>
+
+      <div class="admin-table-wrapper" style="overflow-x: auto">
+        <table class="rate-table">
+          <thead>
+            <tr>
+              <th>操作</th>
+              <th>訂單時間</th>
+              <th>收件人</th>
+              <th>聯絡電話</th>
+              <th>總金額</th>
+              <th>進度</th>
+              <th>負責人</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="order-detail-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h2>訂單詳細資訊</h2>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

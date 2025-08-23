@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>新增員工帳號</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="calculator-container" style="max-width: 500px">
+      <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+      <h1>新增員工帳號</h1>
+      <form id="registerForm">
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="username">新員工帳號</label>
+          <input type="text" id="username" required />
+        </div>
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="password">新員工密碼</label>
+          <input type="password" id="password" required />
+        </div>
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="role">角色</label>
+          <select id="role" class="input-wrapper">
+            <option value="OPERATOR" selected>操作員 (OPERATOR)</option>
+            <option value="ADMIN">管理員 (ADMIN)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-calculate" style="width: 100%">
+          建立帳號
+        </button>
+      </form>
+      <div
+        id="registerMessage"
+        style="margin-top: 15px; text-align: center"
+      ></div>
+      <a
+        href="/admin"
+        class="btn"
+        style="
+          width: 100%;
+          margin-top: 15px;
+          background-color: #7f8c8d;
+          color: white;
+          text-align: center;
+          box-sizing: border-box;
+          text-decoration: none;
+          padding: 12px 0;
+        "
+        >返回後台</a
+      >
+    </div>
+    <script src="register.js"></script>
+  </body>
+</html>
