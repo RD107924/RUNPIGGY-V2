@@ -20,31 +20,29 @@ model User {
 
   // 建立 User 和 ShipmentOrder 之間的一對多關聯
   assignedOrders ShipmentOrder[] @relation("AssignedOrders")
-  
-  // 新增：審計日誌關聯
-  auditLogs     AuditLog[]      @relation("PerformedActions")
 
   @@map("users")
 }
 
 // 客戶會員資料模型
 model Customer {
-  id                 String    @id @default(cuid())
-  email              String    @unique // 會員電子郵件，用於登入
-  passwordHash       String    // 加密後的密碼
-  name               String    // 會員姓名
-  phone              String?   // 聯絡電話
-  lineNickname       String?   // LINE 暱稱
-  defaultAddress     String?   // 預設地址
-  idNumber           String?   // 身分證字號
-  isActive           Boolean   @default(true) // 帳號狀態
-  needPasswordChange Boolean   @default(false) // 新增：是否需要強制修改密碼
-  passwordResetAt    DateTime? // 新增：密碼重設時間
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique // 會員電子郵件，用於登入
+  passwordHash    String    // 加密後的密碼
+  name            String    // 會員姓名
+  phone           String?   // 聯絡電話
+  lineNickname    String?   // LINE 暱稱
+  defaultAddress  String?   // 預設地址
+  idNumber        String?   // 身分證字號
+  isActive        Boolean   @default(true) // 帳號狀態
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // 建立 Customer 和 ShipmentOrder 之間的一對多關聯
   orders ShipmentOrder[] @relation("CustomerOrders")
+  
+  // 建立 Customer 和 ParcelNotification 之間的一對多關聯
+  parcelNotifications ParcelNotification[] @relation("CustomerParcels")
 
   @@index([email])
   @@index([phone])
@@ -65,7 +63,7 @@ model ShipmentOrder {
   // 用於後台追蹤的欄位
   status            String    @default("NEEDS_PURCHASE") // 訂單進度狀態（改用 String）
   
-  // 加值服務欄位 (新增這三行)
+  // 加值服務欄位
   additionalServices String?  // JSON 字串儲存加值服務資訊
   serviceQuoted      Boolean  @default(false) // 是否已報價加值服務
   serviceQuoteAmount Float?   // 加值服務報價金額
@@ -91,21 +89,37 @@ model CalculationQuote {
   @@map("calculation_quotes")
 }
 
-// 新增：審計日誌表（用於記錄重要操作）
-model AuditLog {
-  id            String   @id @default(cuid())
-  action        String   // 操作類型 (如: PASSWORD_RESET, STATUS_CHANGE)
-  targetType    String   // 目標類型 (如: CUSTOMER, ORDER)
-  targetId      String   // 目標ID
-  performedById String   // 執行操作的管理員ID
-  performedBy   User     @relation("PerformedActions", fields: [performedById], references: [id])
-  details       String?  // JSON 格式的額外資訊
-  ipAddress     String?  // 操作者的IP位址
-  userAgent     String?  // 操作者的瀏覽器資訊
-  createdAt     DateTime @default(now())
-
-  @@index([action])
-  @@index([targetId])
-  @@index([performedById])
-  @@map("audit_logs")
+// 新增：包裹預報資料模型
+model ParcelNotification {
+  id                String    @id @default(cuid())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // 大陸物流資訊
+  trackingNumber    String    // 大陸物流單號
+  logisticsCompany  String?   // 物流公司名稱
+  
+  // 商品資訊
+  productName       String    // 商品名稱
+  productLink       String?   // 商品鏈接
+  productImages     String    // JSON 陣列儲存圖片 URL
+  quantity          Int       @default(1) // 數量
+  note              String?   // 備註
+  
+  // 預報狀態
+  status            String    @default("PENDING") // PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
+  
+  // 關聯到會員
+  customerId        String
+  customer          Customer  @relation("CustomerParcels", fields: [customerId], references: [id])
+  
+  // 管理員備註
+  adminNote         String?   // 管理員備註
+  confirmedAt       DateTime? // 確認時間
+  arrivedAt         DateTime? // 到達倉庫時間
+  
+  @@index([customerId])
+  @@index([trackingNumber])
+  @@index([status])
+  @@map("parcel_notifications")
 }

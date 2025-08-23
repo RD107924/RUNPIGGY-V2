@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>包裹預報管理 - 後台</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .parcel-management {
+        margin-top: 30px;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card-small {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .stat-card-small h5 {
+        margin: 0 0 8px 0;
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .stat-card-small p {
+        margin: 0;
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #1a73e8;
+      }
+
+      .parcel-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .parcel-table th,
+      .parcel-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .parcel-table th {
+        background-color: #1a73e8;
+        color: white;
+      }
+
+      .parcel-table tr:hover {
+        background-color: #f8f9fa;
+      }
+
+      .status-select {
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+
+      .btn-view {
+        padding: 5px 10px;
+        font-size: 14px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .btn-view:hover {
+        background-color: #2980b9;
+      }
+
+      .modal-images {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 15px 0;
+      }
+
+      .modal-image {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .modal-image:hover {
+        transform: scale(1.05);
+      }
+
+      .admin-note-input {
+        width: 100%;
+        min-height: 80px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        resize: vertical;
+      }
+
+      .btn-save-note {
+        margin-top: 10px;
+        padding: 8px 16px;
+        background-color: #2ecc71;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .btn-save-note:hover {
+        background-color: #27ae60;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="calculator-container" style="max-width: 1400px">
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+        "
+      >
+        <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+        <h1>包裹預報管理</h1>
+        <div>
+          <a href="/admin" class="btn btn-add" style="text-decoration: none"
+            >返回訂單管理</a
+          >
+          <button
+            id="logoutBtn"
+            class="btn"
+            style="background-color: #7f8c8d; color: white"
+          >
+            登出
+          </button>
+        </div>
+      </div>
+
+      <!-- 統計資料 -->
+      <div class="stats-grid">
+        <div class="stat-card-small">
+          <h5>總預報數</h5>
+          <p id="stats-total">0</p>
+        </div>
+        <div class="stat-card-small">
+          <h5>待確認</h5>
+          <p id="stats-pending">0</p>
+        </div>
+        <div class="stat-card-small">
+          <h5>已確認</h5>
+          <p id="stats-confirmed">0</p>
+        </div>
+        <div class="stat-card-small">
+          <h5>已到倉</h5>
+          <p id="stats-arrived">0</p>
+        </div>
+        <div class="stat-card-small">
+          <h5>已完成</h5>
+          <p id="stats-completed">0</p>
+        </div>
+      </div>
+
+      <!-- 篩選器 -->
+      <div class="filters">
+        <select id="filter-status">
+          <option value="">所有狀態</option>
+          <option value="PENDING">待確認</option>
+          <option value="CONFIRMED">已確認</option>
+          <option value="ARRIVED">已到倉</option>
+          <option value="COMPLETED">已完成</option>
+          <option value="CANCELLED">已取消</option>
+        </select>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="搜尋單號/商品名稱/物流公司..."
+        />
+      </div>
+
+      <!-- 包裹列表 -->
+      <div class="parcel-management">
+        <div class="admin-table-wrapper" style="overflow-x: auto">
+          <table class="parcel-table">
+            <thead>
+              <tr>
+                <th>操作</th>
+                <th>預報時間</th>
+                <th>會員</th>
+                <th>物流單號</th>
+                <th>商品名稱</th>
+                <th>數量</th>
+                <th>狀態</th>
+                <th>備註</th>
+              </tr>
+            </thead>
+            <tbody id="parcelsTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 詳情彈窗 -->
+    <div id="parcel-detail-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 800px">
+        <button class="modal-close-btn">&times;</button>
+        <h2>包裹預報詳情</h2>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <script>
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        window.location.href = "/login.html";
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      let allParcels = [];
+
+      // DOM Elements
+      const parcelsTableBody = document.getElementById("parcelsTableBody");
+      const filterStatus = document.getElementById("filter-status");
+      const searchInput = document.getElementById("search-input");
+      const modal = document.getElementById("parcel-detail-modal");
+      const modalBody = document.getElementById("modal-body");
+      const closeModalBtn = document.querySelector(".modal-close-btn");
+
+      // Event Listeners
+      document.getElementById("logoutBtn").addEventListener("click", () => {
+        localStorage.removeItem("authToken");
+        window.location.href = "/login.html";
+      });
+
+      closeModalBtn.addEventListener(
+        "click",
+        () => (modal.style.display = "none")
+      );
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.style.display = "none";
+      });
+
+      filterStatus.addEventListener("change", fetchParcels);
+      searchInput.addEventListener("input", fetchParcels);
+
+      // 載入統計資料
+      async function loadStats() {
+        try {
+          const response = await fetch("/api/parcels/admin/stats", { headers });
+          if (response.ok) {
+            const stats = await response.json();
+            document.getElementById("stats-total").textContent =
+              stats.totalParcels || 0;
+            document.getElementById("stats-pending").textContent =
+              stats.pendingParcels || 0;
+            document.getElementById("stats-confirmed").textContent =
+              stats.confirmedParcels || 0;
+            document.getElementById("stats-arrived").textContent =
+              stats.arrivedParcels || 0;
+            document.getElementById("stats-completed").textContent =
+              stats.completedParcels || 0;
+          }
+        } catch (error) {
+          console.error("載入統計失敗:", error);
+        }
+      }
+
+      // 載入包裹列表
+      async function fetchParcels() {
+        try {
+          const params = new URLSearchParams({
+            status: filterStatus.value,
+            search: searchInput.value,
+          }).toString();
+
+          const response = await fetch(`/api/parcels/admin?${params}`, {
+            headers,
+          });
+
+          if (response.ok) {
+            allParcels = await response.json();
+            renderParcels(allParcels);
+          } else if (response.status === 401) {
+            localStorage.removeItem("authToken");
+            window.location.href = "/login.html";
+          }
+        } catch (error) {
+          console.error("載入包裹失敗:", error);
+          parcelsTableBody.innerHTML =
+            '<tr><td colspan="8" style="text-align: center;">載入失敗</td></tr>';
+        }
+      }
+
+      // 渲染包裹列表
+      function renderParcels(parcels) {
+        if (parcels.length === 0) {
+          parcelsTableBody.innerHTML =
+            '<tr><td colspan="8" style="text-align: center;">暫無資料</td></tr>';
+          return;
+        }
+
+        const statusMap = {
+          PENDING: "待確認",
+          CONFIRMED: "已確認",
+          ARRIVED: "已到倉",
+          COMPLETED: "已完成",
+          CANCELLED: "已取消",
+        };
+
+        parcelsTableBody.innerHTML = parcels
+          .map(
+            (parcel) => `
+                <tr>
+                    <td><button class="btn-view" data-parcel-id="${
+                      parcel.id
+                    }">查看</button></td>
+                    <td>${new Date(parcel.createdAt).toLocaleString()}</td>
+                    <td>${parcel.customer.name}<br><small>${
+              parcel.customer.email
+            }</small></td>
+                    <td>${parcel.trackingNumber}<br><small>${
+              parcel.logisticsCompany || "-"
+            }</small></td>
+                    <td>${parcel.productName}</td>
+                    <td>${parcel.quantity}</td>
+                    <td>
+                        <select class="status-select" data-parcel-id="${
+                          parcel.id
+                        }">
+                            <option value="PENDING" ${
+                              parcel.status === "PENDING" ? "selected" : ""
+                            }>待確認</option>
+                            <option value="CONFIRMED" ${
+                              parcel.status === "CONFIRMED" ? "selected" : ""
+                            }>已確認</option>
+                            <option value="ARRIVED" ${
+                              parcel.status === "ARRIVED" ? "selected" : ""
+                            }>已到倉</option>
+                            <option value="COMPLETED" ${
+                              parcel.status === "COMPLETED" ? "selected" : ""
+                            }>已完成</option>
+                            <option value="CANCELLED" ${
+                              parcel.status === "CANCELLED" ? "selected" : ""
+                            }>已取消</option>
+                        </select>
+                    </td>
+                    <td>${parcel.note || "-"}</td>
+                </tr>
+            `
+          )
+          .join("");
+      }
+
+      // 顯示包裹詳情
+      function showParcelDetail(parcelId) {
+        const parcel = allParcels.find((p) => p.id === parcelId);
+        if (!parcel) return;
+
+        modalBody.innerHTML = `
+                <div style="background-color: #e9f5ff; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <h4 style="color: #1a73e8; margin-top: 0;">基本資訊</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <p><strong>物流單號:</strong> ${
+                          parcel.trackingNumber
+                        }</p>
+                        <p><strong>物流公司:</strong> ${
+                          parcel.logisticsCompany || "未指定"
+                        }</p>
+                        <p><strong>商品名稱:</strong> ${parcel.productName}</p>
+                        <p><strong>數量:</strong> ${parcel.quantity}</p>
+                        <p><strong>預報時間:</strong> ${new Date(
+                          parcel.createdAt
+                        ).toLocaleString()}</p>
+                        <p><strong>狀態:</strong> <span class="status-badge status-${
+                          parcel.status
+                        }">${getStatusText(parcel.status)}</span></p>
+                    </div>
+                </div>
+
+                <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <h4 style="color: #1a73e8; margin-top: 0;">會員資訊</h4>
+                    <p><strong>姓名:</strong> ${parcel.customer.name}</p>
+                    <p><strong>電子郵件:</strong> ${parcel.customer.email}</p>
+                    <p><strong>電話:</strong> ${
+                      parcel.customer.phone || "未提供"
+                    }</p>
+                </div>
+
+                ${
+                  parcel.productLink
+                    ? `
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                        <h4 style="color: #333; margin-top: 0;">商品鏈接</h4>
+                        <a href="${parcel.productLink}" target="_blank" style="color: #1a73e8;">${parcel.productLink}</a>
+                    </div>
+                `
+                    : ""
+                }
+
+                ${
+                  parcel.note
+                    ? `
+                    <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                        <h4 style="color: #856404; margin-top: 0;">客戶備註</h4>
+                        <p>${parcel.note}</p>
+                    </div>
+                `
+                    : ""
+                }
+
+                ${
+                  parcel.productImages && parcel.productImages.length > 0
+                    ? `
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                        <h4 style="color: #333; margin-top: 0;">商品圖片</h4>
+                        <div class="modal-images">
+                            ${parcel.productImages
+                              .map(
+                                (img) => `
+                                <img src="${img}" alt="商品圖片" class="modal-image" onclick="window.open('${img}', '_blank')">
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    </div>
+                `
+                    : ""
+                }
+
+                <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                    <h4 style="color: #2e7d32; margin-top: 0;">管理員備註</h4>
+                    <textarea class="admin-note-input" id="adminNote" placeholder="輸入備註...">${
+                      parcel.adminNote || ""
+                    }</textarea>
+                    <button class="btn-save-note" onclick="saveAdminNote('${
+                      parcel.id
+                    }')">儲存備註</button>
+                </div>
+
+                ${
+                  parcel.confirmedAt
+                    ? `<p><strong>確認時間:</strong> ${new Date(
+                        parcel.confirmedAt
+                      ).toLocaleString()}</p>`
+                    : ""
+                }
+                ${
+                  parcel.arrivedAt
+                    ? `<p><strong>到倉時間:</strong> ${new Date(
+                        parcel.arrivedAt
+                      ).toLocaleString()}</p>`
+                    : ""
+                }
+            `;
+
+        modal.style.display = "flex";
+      }
+
+      // 取得狀態文字
+      function getStatusText(status) {
+        const statusMap = {
+          PENDING: "待確認",
+          CONFIRMED: "已確認",
+          ARRIVED: "已到倉",
+          COMPLETED: "已完成",
+          CANCELLED: "已取消",
+        };
+        return statusMap[status] || status;
+      }
+
+      // 儲存管理員備註
+      async function saveAdminNote(parcelId) {
+        const adminNote = document.getElementById("adminNote").value;
+
+        try {
+          const response = await fetch(`/api/parcels/admin/${parcelId}/note`, {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({ adminNote }),
+          });
+
+          if (response.ok) {
+            alert("備註已儲存");
+            fetchParcels();
+          } else {
+            alert("儲存失敗");
+          }
+        } catch (error) {
+          console.error("儲存備註失敗:", error);
+          alert("儲存失敗");
+        }
+      }
+
+      // 事件委派
+      parcelsTableBody.addEventListener("click", (e) => {
+        if (e.target.classList.contains("btn-view")) {
+          showParcelDetail(e.target.dataset.parcelId);
+        }
+      });
+
+      parcelsTableBody.addEventListener("change", async (e) => {
+        if (e.target.classList.contains("status-select")) {
+          const parcelId = e.target.dataset.parcelId;
+          const newStatus = e.target.value;
+
+          try {
+            const response = await fetch(
+              `/api/parcels/admin/${parcelId}/status`,
+              {
+                method: "PUT",
+                headers,
+                body: JSON.stringify({ status: newStatus }),
+              }
+            );
+
+            if (response.ok) {
+              fetchParcels();
+              loadStats();
+            } else {
+              alert("更新狀態失敗");
+              fetchParcels(); // 重新載入以還原狀態
+            }
+          } catch (error) {
+            console.error("更新狀態失敗:", error);
+            alert("更新狀態失敗");
+            fetchParcels();
+          }
+        }
+      });
+
+      // 初始載入
+      loadStats();
+      fetchParcels();
+
+      // 定期更新
+      setInterval(() => {
+        loadStats();
+        fetchParcels();
+      }, 30000); // 每30秒更新一次
+    </script>
+  </body>
+</html>

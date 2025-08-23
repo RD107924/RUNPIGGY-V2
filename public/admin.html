@@ -102,6 +102,38 @@
       .filter-services input[type="checkbox"] {
         cursor: pointer;
       }
+
+      /* 新增包裹預報按鈕樣式 */
+      .btn-parcel {
+        background-color: #9c27b0;
+        color: white;
+        padding: 12px 25px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+      }
+
+      .btn-parcel:hover {
+        background-color: #7b1fa2;
+      }
+
+      /* 新增包裹預報統計卡片 */
+      .parcel-stat-card {
+        background-color: #f3e5f5;
+        border: 1px solid #e1bee7;
+      }
+
+      .parcel-stat-card h4 {
+        color: #7b1fa2;
+      }
+
+      .parcel-stat-card p {
+        color: #9c27b0;
+      }
     </style>
   </head>
   <body>
@@ -119,6 +151,12 @@
 
         <h1>訂單管理儀表板</h1>
         <div>
+          <a
+            href="/admin-parcels"
+            class="btn btn-parcel"
+            style="text-decoration: none"
+            >📦 包裹預報管理</a
+          >
           <a
             href="/register.html"
             class="btn btn-add"
@@ -151,6 +189,10 @@
         <div class="stat-card">
           <h4>待報價服務</h4>
           <p id="stats-services">0</p>
+        </div>
+        <div class="stat-card parcel-stat-card">
+          <h4>待確認包裹</h4>
+          <p id="stats-parcels">0</p>
         </div>
       </div>
 
@@ -201,6 +243,31 @@
       </div>
     </div>
 
+    <script>
+      // 在原有的 admin.js 之前，先載入包裹預報統計
+      document.addEventListener("DOMContentLoaded", async () => {
+        // 載入包裹預報統計（如果有 token）
+        const token = localStorage.getItem("authToken");
+        if (token) {
+          try {
+            const response = await fetch("/api/parcels/admin/stats", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (response.ok) {
+              const stats = await response.json();
+              const parcelsElement = document.getElementById("stats-parcels");
+              if (parcelsElement) {
+                parcelsElement.textContent = stats.pendingParcels || 0;
+              }
+            }
+          } catch (error) {
+            console.log("無法載入包裹預報統計");
+          }
+        }
+      });
+    </script>
     <script src="admin.js"></script>
   </body>
 </html>
