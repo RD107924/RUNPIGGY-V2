@@ -1,6 +1,5 @@
 require("dotenv").config();
-// customerRoutes.js (SQLite 相容版本)
-require("dotenv").config(); // 確保讀取環境變數
+// customerRoutes.js (修正版本 - 移除不存在的欄位)
 
 const express = require("express");
 const bcrypt = require("bcryptjs");
@@ -99,7 +98,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// 會員登入（更新：加入密碼重設檢查）
+// 會員登入
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -108,7 +107,7 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "請提供電子郵件和密碼" });
     }
 
-    // 查找會員（新增查詢 needPasswordChange 和 passwordResetAt）
+    // 查找會員（只查詢存在的欄位）
     const customer = await prisma.customer.findUnique({
       where: { email },
       select: {
@@ -120,8 +119,7 @@ router.post("/login", async (req, res) => {
         lineNickname: true,
         defaultAddress: true,
         isActive: true,
-        needPasswordChange: true, // 新增
-        passwordResetAt: true, // 新增
+        // 移除 needPasswordChange 和 passwordResetAt
       },
     });
 
@@ -140,22 +138,7 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "電子郵件或密碼錯誤" });
     }
 
-    // 新增：檢查是否使用預設密碼且已過期（24小時）
-    if (customer.needPasswordChange && customer.passwordResetAt) {
-      const hoursSinceReset =
-        (Date.now() - new Date(customer.passwordResetAt).getTime()) /
-        (1000 * 60 * 60);
-
-      if (hoursSinceReset > 24) {
-        // 預設密碼已過期
-        return res.status(401).json({
-          error: "預設密碼已過期，請聯繫管理員重新設定",
-          code: "PASSWORD_EXPIRED",
-        });
-      }
-    }
-
-    // 產生 JWT token（如果需要修改密碼，token 有效期縮短）
+    // 產生 JWT token
     const token = jwt.sign(
       {
         id: customer.id,
@@ -164,12 +147,11 @@ router.post("/login", async (req, res) => {
         type: "customer",
       },
       process.env.JWT_SECRET,
-      { expiresIn: customer.needPasswordChange ? "1h" : "30d" } // 修改：根據狀態調整有效期
+      { expiresIn: "30d" }
     );
 
     res.json({
-      message: customer.needPasswordChange ? "請立即修改密碼" : "登入成功", // 修改：根據狀態顯示訊息
-      requirePasswordChange: customer.needPasswordChange, // 新增：告知前端是否需要強制修改密碼
+      message: "登入成功",
       customer: {
         id: customer.id,
         email: customer.email,
@@ -199,8 +181,8 @@ router.get("/profile", authenticateCustomer, async (req, res) => {
         lineNickname: true,
         defaultAddress: true,
         idNumber: true,
-        needPasswordChange: true, // 新增：讓前端知道是否需要修改密碼
         createdAt: true,
+        // 移除 needPasswordChange
       },
     });
 
@@ -250,7 +232,7 @@ router.put("/profile", authenticateCustomer, async (req, res) => {
   }
 });
 
-// 修改密碼（更新：加入預設密碼檢查和清除強制修改標記）
+// 修改密碼
 router.put("/change-password", authenticateCustomer, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -263,19 +245,13 @@ router.put("/change-password", authenticateCustomer, async (req, res) => {
       return res.status(400).json({ error: "新密碼長度至少需要 6 個字元" });
     }
 
-    // 新增：不允許使用預設密碼作為新密碼
-    if (newPassword === "88888888") {
-      return res.status(400).json({ error: "不能使用預設密碼作為新密碼" });
-    }
-
-    // 獲取會員資料（新增查詢 needPasswordChange）
+    // 獲取會員資料
     const customer = await prisma.customer.findUnique({
       where: { id: req.customer.id },
       select: {
         id: true,
         passwordHash: true,
-        needPasswordChange: true, // 新增
-        email: true, // 新增：用於記錄
+        email: true,
       },
     });
 
@@ -292,55 +268,23 @@ router.put("/change-password", authenticateCustomer, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const newPasswordHash = await bcrypt.hash(newPassword, salt);
 
-    // 更新密碼（新增：清除強制修改標記）
+    // 更新密碼
     await prisma.customer.update({
       where: { id: req.customer.id },
       data: {
         passwordHash: newPasswordHash,
-        needPasswordChange: false, // 新增：清除強制修改標記
-        passwordResetAt: null, // 新增：清除重設時間
       },
     });
 
-    // 新增：記錄密碼修改（用於審計）
-    if (customer.needPasswordChange) {
-      console.log(
-        `[密碼修改] ${new Date().toISOString()} - 會員 ${
-          customer.email
-        } 已從預設密碼修改為新密碼`
-      );
-    } else {
-      console.log(
-        `[密碼修改] ${new Date().toISOString()} - 會員 ${
-          customer.email
-        } 已修改密碼`
-      );
-    }
-
-    // 新增：嘗試記錄到審計日誌（如果有 AuditLog 表）
-    try {
-      await prisma.auditLog.create({
-        data: {
-          action: "PASSWORD_CHANGED",
-          targetType: "CUSTOMER",
-          targetId: req.customer.id,
-          performedById: req.customer.id, // 會員自己修改
-          details: JSON.stringify({
-            wasForced: customer.needPasswordChange,
-            changedAt: new Date(),
-          }),
-          ipAddress: req.ip || req.connection.remoteAddress,
-          userAgent: req.headers["user-agent"],
-        },
-      });
-    } catch (auditError) {
-      // 如果沒有 AuditLog 表，忽略錯誤
-      console.log(`[審計日誌] 無法寫入: ${auditError.message}`);
-    }
+    // 記錄密碼修改
+    console.log(
+      `[密碼修改] ${new Date().toISOString()} - 會員 ${
+        customer.email
+      } 已修改密碼`
+    );
 
     res.json({
       message: "密碼修改成功",
-      needPasswordChange: false, // 新增：告知前端已不需要強制修改
     });
   } catch (error) {
     console.error("修改密碼失敗:", error);
@@ -362,9 +306,9 @@ router.get("/orders", authenticateCustomer, async (req, res) => {
         phone: true,
         status: true,
         calculationResult: true,
-        additionalServices: true, // ← 加這行
-        serviceQuoted: true, // ← 加這行
-        serviceQuoteAmount: true, // ← 加這行
+        additionalServices: true,
+        serviceQuoted: true,
+        serviceQuoteAmount: true,
       },
     });
 
@@ -375,6 +319,10 @@ router.get("/orders", authenticateCustomer, async (req, res) => {
         typeof order.calculationResult === "string"
           ? JSON.parse(order.calculationResult)
           : order.calculationResult,
+      additionalServices:
+        typeof order.additionalServices === "string"
+          ? JSON.parse(order.additionalServices)
+          : order.additionalServices,
     }));
 
     res.json(ordersWithParsedJson);
@@ -405,6 +353,10 @@ router.get("/orders/:id", authenticateCustomer, async (req, res) => {
         typeof order.calculationResult === "string"
           ? JSON.parse(order.calculationResult)
           : order.calculationResult,
+      additionalServices:
+        typeof order.additionalServices === "string"
+          ? JSON.parse(order.additionalServices)
+          : order.additionalServices,
     };
 
     res.json(orderWithParsedJson);
