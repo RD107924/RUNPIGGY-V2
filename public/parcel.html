@@ -683,43 +683,82 @@
         });
       }
 
-      // 提交表單
+      // 提交表單 - 修復版本
       async function handleSubmit(e) {
         e.preventDefault();
 
-        const formData = new FormData();
-        formData.append(
-          "trackingNumber",
-          document.getElementById("trackingNumber").value
-        );
-        formData.append(
-          "logisticsCompany",
-          document.getElementById("logisticsCompany").value
-        );
-        formData.append(
-          "productName",
-          document.getElementById("productName").value
-        );
-        formData.append(
-          "productLink",
-          document.getElementById("productLink").value
-        );
-        formData.append("quantity", document.getElementById("quantity").value);
-        formData.append("note", document.getElementById("note").value);
-
-        // 添加圖片
-        selectedImages.forEach((image) => {
-          formData.append("images", image);
-        });
+        // 判斷是否有圖片
+        const hasImages = selectedImages.length > 0;
 
         try {
-          const response = await fetch(API_BASE, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${customerToken}`,
-            },
-            body: formData,
-          });
+          let response;
+
+          if (hasImages) {
+            // 有圖片：使用 FormData 和 /create-with-images 端點
+            console.log("提交包含圖片的預報...");
+
+            const formData = new FormData();
+            formData.append(
+              "trackingNumber",
+              document.getElementById("trackingNumber").value
+            );
+            formData.append(
+              "logisticsCompany",
+              document.getElementById("logisticsCompany").value
+            );
+            formData.append(
+              "productName",
+              document.getElementById("productName").value
+            );
+            formData.append(
+              "productLink",
+              document.getElementById("productLink").value
+            );
+            formData.append(
+              "quantity",
+              document.getElementById("quantity").value || "1"
+            );
+            formData.append("note", document.getElementById("note").value);
+
+            // 添加圖片
+            selectedImages.forEach((image) => {
+              formData.append("images", image);
+            });
+
+            response = await fetch(`${API_BASE}/create-with-images`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${customerToken}`,
+                // 注意：FormData 不需要設定 Content-Type
+              },
+              body: formData,
+            });
+          } else {
+            // 沒有圖片：使用 JSON 和 /create-json 端點
+            console.log("提交不含圖片的預報...");
+
+            const requestData = {
+              trackingNumber: document.getElementById("trackingNumber").value,
+              logisticsCompany:
+                document.getElementById("logisticsCompany").value,
+              productName: document.getElementById("productName").value,
+              productLink: document.getElementById("productLink").value,
+              quantity: document.getElementById("quantity").value || "1",
+              note: document.getElementById("note").value,
+            };
+
+            response = await fetch(`${API_BASE}/create-json`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${customerToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(requestData),
+            });
+          }
+
+          // 處理回應
+          const data = await response.json();
 
           if (response.ok) {
             showMessage("包裹預報成功！", "success");
@@ -728,10 +767,11 @@
             document.getElementById("imagePreviewContainer").innerHTML = "";
             loadParcels();
           } else {
-            const error = await response.json();
-            showMessage(error.error || "預報失敗", "error");
+            console.error("預報失敗:", data);
+            showMessage(data.error || "預報失敗", "error");
           }
         } catch (error) {
+          console.error("提交錯誤:", error);
           showMessage("網路錯誤，請稍後再試", "error");
         }
       }
