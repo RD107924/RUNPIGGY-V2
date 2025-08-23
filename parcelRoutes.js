@@ -443,4 +443,105 @@ router.get("/test", (req, res) => {
   });
 });
 
+// ============================================
+// 修改 3: 創建一個新的簡化版本（可選方案）
+// 如果上面的方案還是有問題，使用這個純 JSON 版本
+// ============================================
+// 在 parcelRoutes.js 中添加一個純 JSON 的路由
+router.post("/create-json", optionalAuthenticateCustomer, async (req, res) => {
+  try {
+    console.log("JSON 請求 headers:", req.headers);
+    console.log("JSON 請求 body:", req.body);
+
+    const {
+      trackingNumber,
+      logisticsCompany,
+      productName,
+      productLink,
+      quantity,
+      note,
+      guestEmail,
+      guestPhone,
+      guestName,
+    } = req.body;
+
+    // 驗證必填欄位
+    if (!trackingNumber || !productName) {
+      console.log("缺少必填欄位");
+      return res.status(400).json({
+        error: "物流單號和商品名稱為必填欄位",
+        received: { trackingNumber, productName },
+      });
+    }
+
+    // 非會員需要提供聯絡資訊
+    if (!req.customer && (!guestEmail || !guestPhone)) {
+      return res.status(400).json({
+        error: "非會員需要提供電子郵件和電話",
+      });
+    }
+
+    // 建立包裹預報資料（不包含圖片）
+    const parcelData = {
+      trackingNumber: trackingNumber.trim(),
+      logisticsCompany: logisticsCompany || "",
+      productName: productName.trim(),
+      productLink: productLink || null,
+      productImages: "[]", // 暫時不處理圖片
+      quantity: parseInt(quantity) || 1,
+      note: note || null,
+      status: "PENDING",
+    };
+
+    // 如果是會員，關聯到會員 ID
+    if (req.customer) {
+      parcelData.customerId = req.customer.id;
+    } else {
+      // 非會員，儲存聯絡資訊
+      parcelData.guestEmail = guestEmail;
+      parcelData.guestPhone = guestPhone;
+      parcelData.guestName = guestName || "訪客";
+    }
+
+    console.log("準備儲存的資料:", parcelData);
+
+    const parcel = await prisma.parcelNotification.create({
+      data: parcelData,
+    });
+
+    // 解析 JSON 欄位
+    const parcelWithParsedImages = {
+      ...parcel,
+      productImages: JSON.parse(parcel.productImages),
+    };
+
+    // 為非會員產生查詢碼
+    let queryCode = null;
+    if (!req.customer) {
+      queryCode = `${parcel.id}-${Date.now().toString(36).toUpperCase()}`;
+
+      // 更新包裹記錄，儲存查詢碼
+      await prisma.parcelNotification.update({
+        where: { id: parcel.id },
+        data: { queryCode },
+      });
+
+      parcelWithParsedImages.queryCode = queryCode;
+    }
+
+    res.status(201).json({
+      message: "包裹預報成功",
+      parcel: parcelWithParsedImages,
+      queryCode: queryCode,
+      isGuest: !req.customer,
+    });
+  } catch (error) {
+    console.error("建立包裹預報失敗:", error);
+    res.status(500).json({
+      error: "伺服器內部錯誤",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
 module.exports = router;

@@ -887,65 +887,78 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
 
-          const formData = new FormData();
+          // 檢查必填欄位
+          const trackingNumber = document
+            .getElementById("trackingNumber")
+            .value.trim();
+          const productName = document
+            .getElementById("productName")
+            .value.trim();
 
-          // 包裹資訊
-          formData.append(
-            "trackingNumber",
-            document.getElementById("trackingNumber").value
-          );
-          formData.append(
-            "logisticsCompany",
-            document.getElementById("logisticsCompany").value
-          );
-          formData.append(
-            "productName",
-            document.getElementById("productName").value
-          );
-          formData.append(
-            "productLink",
-            document.getElementById("productLink").value
-          );
-          formData.append(
-            "quantity",
-            document.getElementById("quantity").value
-          );
-          formData.append("note", document.getElementById("note").value);
+          if (!trackingNumber || !productName) {
+            showMessage("請填寫物流單號和商品名稱", "error");
+            return;
+          }
+
+          // 準備資料（使用 JSON 格式而不是 FormData）
+          const requestData = {
+            trackingNumber: trackingNumber,
+            logisticsCompany: document.getElementById("logisticsCompany").value,
+            productName: productName,
+            productLink: document.getElementById("productLink").value,
+            quantity: document.getElementById("quantity").value || "1",
+            note: document.getElementById("note").value,
+          };
 
           // 訪客資訊（如果是訪客模式）
           if (selectedMode === "guest") {
-            const guestName = document.getElementById("guestName").value;
-            const guestEmail = document.getElementById("guestEmail").value;
-            const guestPhone = document.getElementById("guestPhone").value;
+            const guestName = document.getElementById("guestName").value.trim();
+            const guestEmail = document
+              .getElementById("guestEmail")
+              .value.trim();
+            const guestPhone = document
+              .getElementById("guestPhone")
+              .value.trim();
 
             if (!guestName || !guestEmail || !guestPhone) {
               showMessage("請填寫完整的聯絡資訊", "error");
               return;
             }
 
-            formData.append("guestName", guestName);
-            formData.append("guestEmail", guestEmail);
-            formData.append("guestPhone", guestPhone);
+            requestData.guestName = guestName;
+            requestData.guestEmail = guestEmail;
+            requestData.guestPhone = guestPhone;
           }
 
-          // 添加圖片
+          // 暫時註解掉圖片上傳部分
+          // 等 JSON 版本正常運作後再實作
+          /*
           selectedImages.forEach((image) => {
             formData.append("images", image);
           });
+          */
 
           try {
-            const headers = {};
+            // 設定請求標頭
+            const headers = {
+              "Content-Type": "application/json", // 重要：設定為 JSON
+            };
+
             if (selectedMode === "member" && customerToken) {
               headers["Authorization"] = `Bearer ${customerToken}`;
             }
 
-            const response = await fetch(`${API_BASE}/create`, {
+            console.log("發送資料:", requestData); // 除錯用
+
+            // 注意：改為調用 /create-json 而不是 /create
+            const response = await fetch(`${API_BASE}/create-json`, {
               method: "POST",
               headers: headers,
-              body: formData,
+              body: JSON.stringify(requestData), // 使用 JSON.stringify 而不是 FormData
             });
 
             const data = await response.json();
+            console.log("回應資料:", data); // 除錯用
 
             if (response.ok) {
               showMessage("包裹預報成功！", "success");
@@ -966,6 +979,7 @@
               showMessage(data.error || "預報失敗", "error");
             }
           } catch (error) {
+            console.error("提交錯誤:", error);
             showMessage("網路錯誤，請稍後再試", "error");
           }
         });
