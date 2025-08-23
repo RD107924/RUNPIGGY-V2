@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // public/script.js - 完整版本，會員登入連結移至 LINE 暱稱旁邊
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -41,6 +42,52 @@ document.addEventListener("DOMContentLoaded", () => {
       welcomeDiv.style.padding = "15px";
       welcomeDiv.style.borderRadius = "5px";
       welcomeDiv.style.marginBottom = "15px";
+=======
+// public/script.js - 新增會員檢測部分
+// 在原本的 script.js 開頭新增以下程式碼
+
+document.addEventListener("DOMContentLoaded", () => {
+  // --- 檢查會員登入狀態 ---
+  const customerToken = localStorage.getItem('customerToken');
+  let currentCustomer = null;
+  
+  if (customerToken) {
+    // 驗證 token 並取得會員資料
+    fetch('/api/customers/profile', {
+      headers: {
+        'Authorization': `Bearer ${customerToken}`
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw new Error('Token invalid');
+      }
+    })
+    .then(customer => {
+      currentCustomer = customer;
+      // 顯示會員歡迎訊息
+      showCustomerInfo(customer);
+      // 自動填入會員預設資料
+      autoFillCustomerData(customer);
+    })
+    .catch(error => {
+      console.log('會員未登入或 token 無效');
+      localStorage.removeItem('customerToken');
+    });
+  }
+  
+  // 顯示會員資訊
+  function showCustomerInfo(customer) {
+    const infoSection = document.querySelector('.info-section');
+    if (infoSection) {
+      const welcomeDiv = document.createElement('div');
+      welcomeDiv.style.backgroundColor = '#e9f5ff';
+      welcomeDiv.style.padding = '15px';
+      welcomeDiv.style.borderRadius = '5px';
+      welcomeDiv.style.marginBottom = '15px';
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
       welcomeDiv.innerHTML = `
         <p style="margin: 0; color: #1a73e8; font-weight: bold;">
           歡迎回來，${customer.name}！
@@ -51,25 +98,44 @@ document.addEventListener("DOMContentLoaded", () => {
       infoSection.insertBefore(welcomeDiv, infoSection.firstChild);
     }
   }
+<<<<<<< HEAD
 
   // 自動填入會員預設資料
   function autoFillCustomerData(customer) {
     const lineNicknameInput = document.getElementById("lineNickname");
+=======
+  
+  // 自動填入會員預設資料
+  function autoFillCustomerData(customer) {
+    const lineNicknameInput = document.getElementById('lineNickname');
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
     if (lineNicknameInput && customer.lineNickname) {
       lineNicknameInput.value = customer.lineNickname;
     }
   }
+<<<<<<< HEAD
 
   // 會員登出功能
   window.customerLogout = function () {
     if (confirm("確定要登出嗎？")) {
       localStorage.removeItem("customerToken");
+=======
+  
+  // 會員登出功能
+  window.customerLogout = function() {
+    if (confirm('確定要登出嗎？')) {
+      localStorage.removeItem('customerToken');
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
       location.reload();
     }
   };
 
   // === 以下為原本的 script.js 內容 ===
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
   // --- 1. 資料定義 ---
   const rates = {
     general: { name: "一般家具", weightRate: 22, volumeRate: 125 },
@@ -201,8 +267,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="input-wrapper"><label for="height-${itemCount}">高 (cm)</label><input type="number" id="height-${itemCount}" placeholder="單件" min="0"><div class="validation-message">請輸入正數</div></div>
                 </div>
             </div>
+<<<<<<< HEAD
             <div class="cbm-input-wrapper"> 
                 <div class="input-row">
+=======
+            <div class="cbm-input-wrapper">
+                 <div class="input-row">
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
                     <div class="input-wrapper"><label for="cbm-${itemCount}">立方米 (方)</label><input type="number" id="cbm-${itemCount}" placeholder="單件" min="0"><div class="validation-message">請輸入正數</div></div>
                 </div>
             </div>
@@ -210,8 +281,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="input-wrapper"><label for="weight-${itemCount}">重量 (kg)</label><input type="number" id="weight-${itemCount}" placeholder="單件" min="0"><div class="validation-message">請輸入正數</div></div>
                 <div class="input-wrapper"><label for="quantity-${itemCount}">數量</label><input type="number" id="quantity-${itemCount}" value="1" min="1"><div class="validation-message">數量至少為 1</div></div>
             </div>
+<<<<<<< HEAD
             
             <div class="input-row">
+=======
+             <div class="input-row">
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
                 <div class="input-wrapper"><label for="type-${itemCount}">家具種類</label><select id="type-${itemCount}">${optionsHtml}</select></div>
             </div>
             ${
@@ -428,10 +503,17 @@ document.addEventListener("DOMContentLoaded", () => {
           const dataToStore = {
             lineNickname: lineNicknameInput.value,
             calculationResult: calculationResultData,
+<<<<<<< HEAD
             customerToken: customerToken, // 儲存會員 token
           };
           localStorage.setItem("calculationData", JSON.stringify(dataToStore));
 
+=======
+            customerToken: customerToken // 儲存會員 token
+          };
+          localStorage.setItem("calculationData", JSON.stringify(dataToStore));
+          
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
           // 如果是會員，可以直接跳到訂單頁面並自動填入資料
           if (currentCustomer) {
             window.location.href = "order.html?prefill=true";
@@ -632,6 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
     addNewItem();
   }
   initializeUsageCounter();
+<<<<<<< HEAD
 
   // --- 6. 修改：將會員登入/註冊連結移到 LINE 暱稱輸入框旁邊 ---
   const infoSection = document.querySelector(".info-section");
@@ -693,3 +776,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // 移除原本在底部 admin-login-link 的會員連結插入程式碼
   // 因為現在已經移到 LINE 暱稱旁邊了
 });
+=======
+  
+  // --- 6. 新增會員快速登入連結 ---
+  const adminLoginLink = document.querySelector('.admin-login-link');
+  if (adminLoginLink && !customerToken) {
+    const customerLink = document.createElement('a');
+    customerLink.href = '/customer.html';
+    customerLink.textContent = '會員登入/註冊';
+    customerLink.style.marginRight = '15px';
+    customerLink.style.color = '#1a73e8';
+    adminLoginLink.insertBefore(customerLink, adminLoginLink.firstChild);
+  }
+});
+>>>>>>> bd048589f137638cc42ade6caf354b9dc12a8192
