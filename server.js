@@ -204,3 +204,7 @@ app.listen(PORT, "0.0.0.0", () => {
     console.log(`本地訪問: http://localhost:${PORT}`);
   }
 });
+// 新增公開包裹預報頁面
+app.get("/parcel-public", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "parcel-public.html"));
+});

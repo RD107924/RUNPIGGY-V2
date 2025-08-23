@@ -91,35 +91,38 @@ model CalculationQuote {
 
 // 新增：包裹預報資料模型
 model ParcelNotification {
-  id                String    @id @default(cuid())
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                String   @id @default(cuid())
+  trackingNumber    String
+  logisticsCompany  String?
+  productName       String
+  productLink       String?
+  productImages     String   @default("[]") // JSON array of image URLs
+  quantity          Int      @default(1)
+  note              String?
+  status            String   @default("PENDING") // PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
   
-  // 大陸物流資訊
-  trackingNumber    String    // 大陸物流單號
-  logisticsCompany  String?   // 物流公司名稱
+  // 會員關聯（選填）
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id])
   
-  // 商品資訊
-  productName       String    // 商品名稱
-  productLink       String?   // 商品鏈接
-  productImages     String    // JSON 陣列儲存圖片 URL
-  quantity          Int       @default(1) // 數量
-  note              String?   // 備註
-  
-  // 預報狀態
-  status            String    @default("PENDING") // PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
-  
-  // 關聯到會員
-  customerId        String
-  customer          Customer  @relation("CustomerParcels", fields: [customerId], references: [id])
+  // 非會員資訊（新增欄位）
+  guestEmail        String?  // 非會員的電子郵件
+  guestPhone        String?  // 非會員的電話
+  guestName         String?  // 非會員的姓名
+  queryCode         String?  @unique // 非會員查詢碼
   
   // 管理員備註
-  adminNote         String?   // 管理員備註
-  confirmedAt       DateTime? // 確認時間
-  arrivedAt         DateTime? // 到達倉庫時間
+  adminNote         String?
+  
+  // 時間戳記
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  confirmedAt       DateTime?
+  arrivedAt         DateTime?
   
   @@index([customerId])
   @@index([trackingNumber])
   @@index([status])
-  @@map("parcel_notifications")
+  @@index([guestEmail])
+  @@index([queryCode])
 }
