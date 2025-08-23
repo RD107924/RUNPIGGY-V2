@@ -90,7 +90,8 @@
         font-size: 14px;
       }
 
-      input {
+      input,
+      textarea {
         width: 100%;
         padding: 10px;
         border: 1px solid #ccc;
@@ -98,7 +99,8 @@
         font-size: 16px;
       }
 
-      input:focus {
+      input:focus,
+      textarea:focus {
         outline: none;
         border-color: #1a73e8;
       }
@@ -110,6 +112,9 @@
         border-radius: 5px;
         cursor: pointer;
         transition: background-color 0.3s;
+        display: inline-block;
+        text-decoration: none;
+        text-align: center;
       }
 
       .btn-primary {
@@ -184,22 +189,58 @@
       .info-row {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         padding: 10px 0;
         border-bottom: 1px solid #ddd;
+        flex-wrap: wrap;
+        gap: 10px;
       }
 
       .info-row:last-child {
         border-bottom: none;
       }
 
+      .info-label {
+        font-weight: 500;
+        color: #666;
+        min-width: 100px;
+      }
+
+      .info-value {
+        flex: 1;
+        text-align: right;
+        word-break: break-word;
+      }
+
       .orders-section {
         margin-top: 30px;
+      }
+
+      .orders-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .auto-refresh-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* 桌面版表格 */
+      .orders-table-wrapper {
+        overflow-x: auto;
+        margin-top: 20px;
       }
 
       .orders-table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 20px;
+        min-width: 600px;
       }
 
       .orders-table th,
@@ -207,15 +248,60 @@
         padding: 12px;
         text-align: left;
         border-bottom: 1px solid #ddd;
+        white-space: nowrap;
       }
 
       .orders-table th {
         background-color: #1a73e8;
         color: white;
+        font-weight: 500;
       }
 
       .orders-table tr:hover {
         background-color: #f8f9fa;
+      }
+
+      /* 手機版卡片列表 */
+      .orders-cards {
+        display: none;
+        margin-top: 20px;
+      }
+
+      .order-card {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+      }
+
+      .order-card-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 14px;
+        color: #666;
+      }
+
+      .order-card-body {
+        display: grid;
+        gap: 8px;
+      }
+
+      .order-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .order-card-label {
+        color: #666;
+        font-size: 14px;
+      }
+
+      .order-card-value {
+        font-weight: 500;
+        text-align: right;
       }
 
       .status-badge {
@@ -223,6 +309,7 @@
         border-radius: 5px;
         font-size: 12px;
         font-weight: bold;
+        display: inline-block;
       }
 
       .status-NEEDS_PURCHASE {
@@ -255,7 +342,6 @@
         color: white;
       }
 
-      /* === 新增：加值服務相關樣式 === */
       .service-badge {
         display: inline-block;
         padding: 3px 8px;
@@ -316,12 +402,17 @@
         color: #2e7d32;
         padding-top: 12px;
       }
-      /* === 結束：加值服務相關樣式 === */
 
       .action-buttons {
         display: flex;
         gap: 10px;
         margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      .action-buttons .btn {
+        flex: 1;
+        min-width: 120px;
       }
 
       .modal {
@@ -335,6 +426,7 @@
         align-items: center;
         justify-content: center;
         z-index: 2000;
+        padding: 20px;
       }
 
       .modal.active {
@@ -345,7 +437,7 @@
         background-color: #fff;
         padding: 30px;
         border-radius: 10px;
-        width: 90%;
+        width: 100%;
         max-width: 500px;
         max-height: 90vh;
         overflow-y: auto;
@@ -359,6 +451,9 @@
         font-size: 2em;
         cursor: pointer;
         color: #999;
+        background: none;
+        border: none;
+        line-height: 1;
       }
 
       .modal-close:hover {
@@ -388,9 +483,15 @@
         transform: scale(1.1);
       }
 
+      /* 響應式設計 */
       @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+
         .container {
           padding: 15px;
+          border-radius: 8px;
         }
 
         h1 {
@@ -402,13 +503,78 @@
           text-align: center;
         }
 
-        .orders-table {
+        .logo {
+          max-width: 80px;
+        }
+
+        .auth-tabs {
+          width: 100%;
+        }
+
+        .tab-btn {
+          flex: 1;
+          padding: 10px 5px;
           font-size: 14px;
         }
 
-        .orders-table th,
-        .orders-table td {
-          padding: 8px;
+        .info-row {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .info-value {
+          text-align: left;
+          width: 100%;
+        }
+
+        .action-buttons {
+          flex-direction: column;
+        }
+
+        .action-buttons .btn {
+          width: 100%;
+          min-width: auto;
+        }
+
+        /* 隱藏桌面版表格，顯示手機版卡片 */
+        .orders-table-wrapper {
+          display: none;
+        }
+
+        .orders-cards {
+          display: block;
+        }
+
+        .orders-controls {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .auto-refresh-control {
+          justify-content: space-between;
+          width: 100%;
+        }
+
+        .modal-content {
+          padding: 20px;
+          margin: 10px;
+        }
+
+        .quick-order-btn {
+          width: 50px;
+          height: 50px;
+          bottom: 15px;
+          right: 15px;
+        }
+
+        #headerButtons {
+          width: 100%;
+          display: flex;
+          gap: 10px;
+        }
+
+        #headerButtons .btn {
+          flex: 1;
         }
       }
 
@@ -448,6 +614,29 @@
           background-color: transparent;
         }
       }
+
+      /* 通知樣式 */
+      .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #1a73e8;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 90%;
+      }
+
+      @media (max-width: 768px) {
+        .notification {
+          right: 10px;
+          left: 10px;
+          max-width: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -456,10 +645,7 @@
         <img src="/assets/logo.png" alt="小跑豬 LOGO" class="logo" />
         <h1>會員中心</h1>
         <div id="headerButtons">
-          <a
-            href="/"
-            class="btn btn-secondary"
-            style="text-decoration: none; margin-right: 10px"
+          <a href="/" class="btn btn-secondary" style="text-decoration: none"
             >返回首頁</a
           >
           <button id="logoutBtn" class="btn btn-danger" style="display: none">
@@ -543,24 +729,24 @@
         <div class="user-info">
           <h2>會員資料</h2>
           <div class="info-row">
-            <span>姓名：</span>
-            <span id="userName">-</span>
+            <span class="info-label">姓名：</span>
+            <span class="info-value" id="userName">-</span>
           </div>
           <div class="info-row">
-            <span>電子郵件：</span>
-            <span id="userEmail">-</span>
+            <span class="info-label">電子郵件：</span>
+            <span class="info-value" id="userEmail">-</span>
           </div>
           <div class="info-row">
-            <span>電話：</span>
-            <span id="userPhone">-</span>
+            <span class="info-label">電話：</span>
+            <span class="info-value" id="userPhone">-</span>
           </div>
           <div class="info-row">
-            <span>LINE 暱稱：</span>
-            <span id="userLine">-</span>
+            <span class="info-label">LINE 暱稱：</span>
+            <span class="info-value" id="userLine">-</span>
           </div>
           <div class="info-row">
-            <span>預設地址：</span>
-            <span id="userAddress">-</span>
+            <span class="info-label">預設地址：</span>
+            <span class="info-value" id="userAddress">-</span>
           </div>
           <div class="action-buttons">
             <button class="btn btn-secondary" onclick="openEditProfile()">
@@ -577,15 +763,8 @@
 
         <div class="orders-section">
           <h2>我的訂單</h2>
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 10px;
-            "
-          >
-            <div style="display: flex; align-items: center; gap: 10px">
+          <div class="orders-controls">
+            <div class="auto-refresh-control">
               <label
                 style="display: flex; align-items: center; cursor: pointer"
               >
@@ -610,25 +789,36 @@
               🔄 立即重新整理
             </button>
           </div>
-          <table class="orders-table">
-            <thead>
-              <tr>
-                <th>訂單編號</th>
-                <th>下單時間</th>
-                <th>收件人</th>
-                <th>運費</th>
-                <th>加值服務</th>
-                <th>總金額</th>
-                <th>狀態</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTableBody">
-              <tr>
-                <td colspan="8" style="text-align: center">載入中...</td>
-              </tr>
-            </tbody>
-          </table>
+
+          <!-- 桌面版表格 -->
+          <div class="orders-table-wrapper">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>訂單編號</th>
+                  <th>下單時間</th>
+                  <th>收件人</th>
+                  <th>運費</th>
+                  <th>加值服務</th>
+                  <th>總金額</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr>
+                  <td colspan="8" style="text-align: center">載入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 手機版卡片列表 -->
+          <div class="orders-cards" id="ordersCards">
+            <div style="text-align: center; padding: 20px; color: #666">
+              載入中...
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -636,9 +826,9 @@
     <!-- 編輯資料 Modal -->
     <div id="editProfileModal" class="modal">
       <div class="modal-content">
-        <span class="modal-close" onclick="closeModal('editProfileModal')"
-          >&times;</span
-        >
+        <button class="modal-close" onclick="closeModal('editProfileModal')">
+          &times;
+        </button>
         <h2>編輯會員資料</h2>
         <form id="editProfileForm">
           <div class="form-group">
@@ -669,9 +859,9 @@
     <!-- 修改密碼 Modal -->
     <div id="changePasswordModal" class="modal">
       <div class="modal-content">
-        <span class="modal-close" onclick="closeModal('changePasswordModal')"
-          >&times;</span
-        >
+        <button class="modal-close" onclick="closeModal('changePasswordModal')">
+          &times;
+        </button>
         <h2>修改密碼</h2>
         <form id="changePasswordForm">
           <div class="form-group">
@@ -719,7 +909,7 @@
       let currentUser = null;
       let authToken = localStorage.getItem("customerToken");
       let autoRefreshInterval = null;
-      let lastOrderStatus = {}; // 新增：記錄訂單狀態變化
+      let lastOrderStatus = {};
 
       // 頁面載入時檢查登入狀態
       window.addEventListener("DOMContentLoaded", () => {
@@ -730,7 +920,6 @@
         // 設定自動更新勾選框
         const autoRefreshCheckbox = document.getElementById("autoRefresh");
         if (autoRefreshCheckbox) {
-          // 讀取用戶偏好設定
           const savedPreference = localStorage.getItem("autoRefreshEnabled");
           if (savedPreference !== null) {
             autoRefreshCheckbox.checked = savedPreference === "true";
@@ -789,76 +978,7 @@
         clearMessage();
       }
 
-      // === 新增：解析加值服務函式 ===
-      function parseAdditionalServices(servicesJson) {
-        if (!servicesJson) return null;
-        try {
-          return typeof servicesJson === "string"
-            ? JSON.parse(servicesJson)
-            : servicesJson;
-        } catch (e) {
-          console.error("解析加值服務失敗:", e);
-          return null;
-        }
-      }
-
-      // === 新增：格式化加值服務顯示 ===
-      function formatServiceBadge(order) {
-        const services = parseAdditionalServices(order.additionalServices);
-        if (!services) return "-";
-
-        const items = [];
-        if (services.carryUpstairs?.needed) {
-          items.push(`搬運${services.carryUpstairs.floor}樓`);
-        }
-        if (services.assembly?.needed) {
-          items.push("組裝");
-        }
-
-        if (items.length === 0) return "-";
-
-        const badgeClass = order.serviceQuoted
-          ? "service-quoted"
-          : "service-pending";
-        const statusText = order.serviceQuoted
-          ? `已報價 NT$${(order.serviceQuoteAmount || 0).toLocaleString()}`
-          : "待報價";
-
-        return `
-          <span class="service-badge ${badgeClass}">
-            ${items.join("、")}
-          </span>
-          <br>
-          <small style="color: ${
-            order.serviceQuoted ? "green" : "orange"
-          };">${statusText}</small>
-        `;
-      }
-
-      // === 新增：計算總金額 ===
-      function calculateTotalAmount(order) {
-        let calculationResult = order.calculationResult;
-        if (typeof calculationResult === "string") {
-          try {
-            calculationResult = JSON.parse(calculationResult);
-          } catch (e) {
-            calculationResult = {};
-          }
-        }
-
-        const shippingFee = calculationResult?.finalTotal || 0;
-        const serviceFee = order.serviceQuoted
-          ? order.serviceQuoteAmount || 0
-          : 0;
-
-        return {
-          shipping: shippingFee,
-          service: serviceFee,
-          total: shippingFee + serviceFee,
-        };
-      }
-
-      // 登入處理（保持原有）
+      // 登入處理
       document
         .getElementById("loginForm")
         ?.addEventListener("submit", async (e) => {
@@ -882,168 +1002,20 @@
               localStorage.setItem("customerToken", data.token);
               authToken = data.token;
               currentUser = data.customer;
-
-              // 新增：檢查是否需要強制修改密碼
-              if (data.requirePasswordChange) {
-                showMessage("請先修改密碼以確保帳號安全", "success");
-                // 顯示強制修改密碼的對話框
-                showForcePasswordChangeModal();
-              } else {
-                showMessage("登入成功！", "success");
-                setTimeout(() => showDashboard(), 1000);
-              }
+              showMessage("登入成功！", "success");
+              setTimeout(() => showDashboard(), 1000);
             } else {
-              // 特別處理密碼過期的錯誤
-              if (data.code === "PASSWORD_EXPIRED") {
-                showMessage(
-                  "預設密碼已過期（超過24小時），請聯繫管理員重新設定",
-                  "error"
-                );
-              } else {
-                showMessage(data.error || "登入失敗", "error");
-              }
+              showMessage(data.error || "登入失敗", "error");
             }
           } catch (error) {
             showMessage("網路錯誤，請稍後再試", "error");
           }
         });
 
-      // 新增：顯示強制修改密碼的 Modal（保持原有）
-      function showForcePasswordChangeModal() {
-        // 建立 Modal HTML
-        const modalHtml = `
-        <div id="forcePasswordChangeModal" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        ">
-            <div style="
-                background-color: #fff;
-                padding: 30px;
-                border-radius: 10px;
-                width: 90%;
-                max-width: 450px;
-            ">
-                <h2 style="color: #e74c3c; margin-top: 0;">⚠️ 必須修改密碼</h2>
-                
-                <div style="
-                    background-color: #fff3cd;
-                    border: 1px solid #ffc107;
-                    color: #856404;
-                    padding: 15px;
-                    border-radius: 5px;
-                    margin-bottom: 20px;
-                ">
-                    <strong>安全提醒：</strong><br>
-                    您目前使用的是系統預設密碼，為了您的帳號安全，請立即設定新密碼。
-                </div>
-                
-                <form id="forceChangePasswordForm">
-                    <div class="form-group">
-                        <label for="currentDefaultPassword">目前密碼（預設密碼）</label>
-                        <input type="password" id="currentDefaultPassword" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="newRequiredPassword">新密碼（至少6個字元）</label>
-                        <input type="password" id="newRequiredPassword" minlength="6" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="confirmNewPassword">確認新密碼</label>
-                        <input type="password" id="confirmNewPassword" minlength="6" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">
-                        確認修改密碼
-                    </button>
-                </form>
-                
-                <div id="forceChangeMessage" style="margin-top: 15px; text-align: center;"></div>
-            </div>
-        </div>
-    `;
-
-        // 插入 Modal 到頁面
-        document.body.insertAdjacentHTML("beforeend", modalHtml);
-
-        // 綁定表單提交事件
-        document
-          .getElementById("forceChangePasswordForm")
-          .addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const currentPassword = document.getElementById(
-              "currentDefaultPassword"
-            ).value;
-            const newPassword = document.getElementById(
-              "newRequiredPassword"
-            ).value;
-            const confirmPassword =
-              document.getElementById("confirmNewPassword").value;
-            const messageDiv = document.getElementById("forceChangeMessage");
-
-            // 驗證
-            if (newPassword !== confirmPassword) {
-              messageDiv.textContent = "新密碼與確認密碼不相符！";
-              messageDiv.style.color = "red";
-              return;
-            }
-
-            if (newPassword === "88888888") {
-              messageDiv.textContent = "不能使用預設密碼作為新密碼！";
-              messageDiv.style.color = "red";
-              return;
-            }
-
-            try {
-              const response = await fetch("/api/customers/change-password", {
-                method: "PUT",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${authToken}`,
-                },
-                body: JSON.stringify({ currentPassword, newPassword }),
-              });
-
-              const data = await response.json();
-
-              if (response.ok) {
-                messageDiv.textContent = "密碼修改成功！即將進入會員中心...";
-                messageDiv.style.color = "green";
-
-                // 2秒後關閉 Modal 並顯示會員中心
-                setTimeout(() => {
-                  document.getElementById("forcePasswordChangeModal").remove();
-                  showDashboard();
-                }, 2000);
-              } else {
-                messageDiv.textContent = data.error || "修改失敗";
-                messageDiv.style.color = "red";
-              }
-            } catch (error) {
-              messageDiv.textContent = "網路錯誤，請稍後再試";
-              messageDiv.style.color = "red";
-            }
-          });
-
-        // 防止使用者關閉 Modal
-        window.onbeforeunload = function () {
-          return "您必須先修改密碼才能使用系統";
-        };
-      }
-
-      // 註冊處理（保持原有）
+      // 註冊處理
       document
         .getElementById("registerForm")
-        .addEventListener("submit", async (e) => {
+        ?.addEventListener("submit", async (e) => {
           e.preventDefault();
 
           const formData = {
@@ -1081,11 +1053,11 @@
           }
         });
 
-      // 顯示會員儀表板（保持原有）
+      // 顯示會員儀表板
       async function showDashboard() {
         document.getElementById("authSection").classList.remove("active");
         document.getElementById("dashboard").classList.add("active");
-        document.getElementById("logoutBtn").style.display = "block";
+        document.getElementById("logoutBtn").style.display = "inline-block";
 
         // 顯示會員資料
         document.getElementById("userName").textContent =
@@ -1109,7 +1081,7 @@
         }
       }
 
-      // 載入訂單列表（保持原有）
+      // 載入訂單列表
       async function loadOrders() {
         try {
           const response = await fetch(`${API_BASE}/orders`, {
@@ -1122,19 +1094,192 @@
             const orders = await response.json();
             displayOrders(orders);
             updateLastRefreshTime();
-            checkOrderChanges(orders); // 新增：檢查變化
+            checkOrderChanges(orders);
           }
         } catch (error) {
           console.error("載入訂單失敗:", error);
         }
       }
 
-      // === 新增：檢查訂單變化 ===
+      // 顯示訂單列表
+      function displayOrders(orders) {
+        const tbody = document.getElementById("ordersTableBody");
+        const cardsContainer = document.getElementById("ordersCards");
+
+        if (!tbody || !cardsContainer) return;
+
+        if (orders.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="8" style="text-align: center;">尚無訂單記錄</td></tr>';
+          cardsContainer.innerHTML =
+            '<div style="text-align: center; padding: 20px; color: #666;">尚無訂單記錄</div>';
+          return;
+        }
+
+        const statusMap = {
+          NEEDS_PURCHASE: "需採購清單",
+          PURCHASED: "已採購",
+          IN_WAREHOUSE: "已入庫",
+          NOT_IN_WAREHOUSE: "未入庫",
+          SHIPPED: "已發貨",
+          IN_CUSTOMS: "清關中",
+          DELIVERY_COMPLETE: "派送完成",
+        };
+
+        // 桌面版表格
+        tbody.innerHTML = orders
+          .map((order) => {
+            const statusText =
+              statusMap[order.status] || order.status || "處理中";
+            const amounts = calculateTotalAmount(order);
+            const serviceBadge = formatServiceBadge(order);
+
+            return `
+                    <tr>
+                        <td>${order.id.slice(0, 8)}...</td>
+                        <td>${new Date(order.createdAt).toLocaleDateString(
+                          "zh-TW"
+                        )}</td>
+                        <td>${order.recipientName}</td>
+                        <td>NT$ ${amounts.shipping.toLocaleString()}</td>
+                        <td>${serviceBadge}</td>
+                        <td><strong>NT$ ${amounts.total.toLocaleString()}</strong></td>
+                        <td><span class="status-badge status-${
+                          order.status
+                        }">${statusText}</span></td>
+                        <td><button class="btn btn-secondary" onclick="viewOrderDetail('${
+                          order.id
+                        }')">查看</button></td>
+                    </tr>
+                `;
+          })
+          .join("");
+
+        // 手機版卡片
+        cardsContainer.innerHTML = orders
+          .map((order) => {
+            const statusText =
+              statusMap[order.status] || order.status || "處理中";
+            const amounts = calculateTotalAmount(order);
+            const serviceBadge = formatServiceBadge(order);
+
+            return `
+                    <div class="order-card">
+                        <div class="order-card-header">
+                            <span>#${order.id.slice(0, 8)}...</span>
+                            <span>${new Date(
+                              order.createdAt
+                            ).toLocaleDateString("zh-TW")}</span>
+                        </div>
+                        <div class="order-card-body">
+                            <div class="order-card-row">
+                                <span class="order-card-label">收件人</span>
+                                <span class="order-card-value">${
+                                  order.recipientName
+                                }</span>
+                            </div>
+                            <div class="order-card-row">
+                                <span class="order-card-label">運費</span>
+                                <span class="order-card-value">NT$ ${amounts.shipping.toLocaleString()}</span>
+                            </div>
+                            <div class="order-card-row">
+                                <span class="order-card-label">加值服務</span>
+                                <span class="order-card-value">${serviceBadge}</span>
+                            </div>
+                            <div class="order-card-row">
+                                <span class="order-card-label">總金額</span>
+                                <span class="order-card-value"><strong>NT$ ${amounts.total.toLocaleString()}</strong></span>
+                            </div>
+                            <div class="order-card-row">
+                                <span class="order-card-label">狀態</span>
+                                <span class="order-card-value"><span class="status-badge status-${
+                                  order.status
+                                }">${statusText}</span></span>
+                            </div>
+                            <button class="btn btn-secondary" onclick="viewOrderDetail('${
+                              order.id
+                            }')" style="width: 100%; margin-top: 10px;">查看詳情</button>
+                        </div>
+                    </div>
+                `;
+          })
+          .join("");
+      }
+
+      // 解析加值服務
+      function parseAdditionalServices(servicesJson) {
+        if (!servicesJson) return null;
+        try {
+          return typeof servicesJson === "string"
+            ? JSON.parse(servicesJson)
+            : servicesJson;
+        } catch (e) {
+          console.error("解析加值服務失敗:", e);
+          return null;
+        }
+      }
+
+      // 格式化加值服務顯示
+      function formatServiceBadge(order) {
+        const services = parseAdditionalServices(order.additionalServices);
+        if (!services) return "-";
+
+        const items = [];
+        if (services.carryUpstairs?.needed) {
+          items.push(`搬運${services.carryUpstairs.floor}樓`);
+        }
+        if (services.assembly?.needed) {
+          items.push("組裝");
+        }
+
+        if (items.length === 0) return "-";
+
+        const badgeClass = order.serviceQuoted
+          ? "service-quoted"
+          : "service-pending";
+        const statusText = order.serviceQuoted
+          ? `已報價 NT$${(order.serviceQuoteAmount || 0).toLocaleString()}`
+          : "待報價";
+
+        return `
+                <span class="service-badge ${badgeClass}">
+                    ${items.join("、")}
+                </span>
+                <br>
+                <small style="color: ${
+                  order.serviceQuoted ? "green" : "orange"
+                };">${statusText}</small>
+            `;
+      }
+
+      // 計算總金額
+      function calculateTotalAmount(order) {
+        let calculationResult = order.calculationResult;
+        if (typeof calculationResult === "string") {
+          try {
+            calculationResult = JSON.parse(calculationResult);
+          } catch (e) {
+            calculationResult = {};
+          }
+        }
+
+        const shippingFee = calculationResult?.finalTotal || 0;
+        const serviceFee = order.serviceQuoted
+          ? order.serviceQuoteAmount || 0
+          : 0;
+
+        return {
+          shipping: shippingFee,
+          service: serviceFee,
+          total: shippingFee + serviceFee,
+        };
+      }
+
+      // 檢查訂單變化
       function checkOrderChanges(orders) {
         orders.forEach((order) => {
           const previousStatus = lastOrderStatus[order.id];
           if (previousStatus) {
-            // 檢查狀態變化
             if (previousStatus.status !== order.status) {
               const statusMap = {
                 NEEDS_PURCHASE: "需採購清單",
@@ -1151,7 +1296,6 @@
                 }`
               );
             }
-            // 檢查報價變化
             if (!previousStatus.serviceQuoted && order.serviceQuoted) {
               showNotification(
                 `訂單 ${order.id.slice(0, 8)}... 加值服務已報價：NT$ ${
@@ -1160,7 +1304,6 @@
               );
             }
           }
-          // 更新記錄
           lastOrderStatus[order.id] = {
             status: order.status,
             serviceQuoted: order.serviceQuoted,
@@ -1169,7 +1312,7 @@
         });
       }
 
-      // 更新最後更新時間顯示（保持原有）
+      // 更新最後更新時間顯示
       function updateLastRefreshTime() {
         const lastUpdateElement = document.getElementById("lastUpdateTime");
         if (lastUpdateElement) {
@@ -1183,26 +1326,21 @@
         }
       }
 
-      // 開始自動更新（保持原有）
+      // 開始自動更新
       function startAutoRefresh() {
-        // 先停止現有的計時器（如果有）
         stopAutoRefresh();
-
-        // 設定新的計時器（每30秒更新一次）
         autoRefreshInterval = setInterval(() => {
-          // 只在會員儀表板顯示時才更新
           if (
             document.getElementById("dashboard").classList.contains("active")
           ) {
             console.log("自動更新訂單...");
             loadOrders();
           }
-        }, 30000); // 30秒
-
+        }, 30000);
         console.log("已啟動自動更新（每30秒）");
       }
 
-      // 停止自動更新（保持原有）
+      // 停止自動更新
       function stopAutoRefresh() {
         if (autoRefreshInterval) {
           clearInterval(autoRefreshInterval);
@@ -1211,112 +1349,7 @@
         }
       }
 
-      // === 修改：顯示訂單列表（加入加值服務欄位）===
-      function displayOrders(orders) {
-        const tbody = document.getElementById("ordersTableBody");
-
-        if (!tbody) return; // 防止元素不存在
-
-        if (orders.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="8" style="text-align: center;">尚無訂單記錄</td></tr>';
-          return;
-        }
-
-        const statusMap = {
-          NEEDS_PURCHASE: "需採購清單",
-          PURCHASED: "已採購",
-          IN_WAREHOUSE: "已入庫",
-          NOT_IN_WAREHOUSE: "未入庫",
-          SHIPPED: "已發貨",
-          IN_CUSTOMS: "清關中",
-          DELIVERY_COMPLETE: "派送完成",
-        };
-
-        // 保存當前顯示的訂單狀態，用於比較變化
-        const currentOrdersMap = {};
-        tbody.querySelectorAll("tr").forEach((row) => {
-          const orderId = row.getAttribute("data-order-id");
-          const status = row.getAttribute("data-order-status");
-          if (orderId) {
-            currentOrdersMap[orderId] = status;
-          }
-        });
-
-        tbody.innerHTML = orders
-          .map((order) => {
-            const statusText =
-              statusMap[order.status] || order.status || "處理中";
-            const amounts = calculateTotalAmount(order);
-            const serviceBadge = formatServiceBadge(order);
-
-            // 檢查狀態是否有更新
-            const hasStatusChanged =
-              currentOrdersMap[order.id] &&
-              currentOrdersMap[order.id] !== order.status;
-            const highlightClass = hasStatusChanged ? "status-updated" : "";
-
-            return `
-              <tr data-order-id="${order.id}" data-order-status="${
-              order.status
-            }" class="${highlightClass}">
-                <td>${order.id.slice(0, 8)}...</td>
-                <td>${new Date(order.createdAt).toLocaleDateString(
-                  "zh-TW"
-                )}</td>
-                <td>${order.recipientName}</td>
-                <td>NT$ ${amounts.shipping.toLocaleString()}</td>
-                <td>${serviceBadge}</td>
-                <td>
-                  <strong>NT$ ${amounts.total.toLocaleString()}</strong>
-                  ${
-                    amounts.service > 0
-                      ? `<br><small style="color: #666;">(含服務費)</small>`
-                      : ""
-                  }
-                </td>
-                <td><span class="status-badge status-${
-                  order.status
-                }">${statusText}</span></td>
-                <td><button class="btn btn-secondary" onclick="viewOrderDetail('${
-                  order.id
-                }')">查看</button></td>
-              </tr>
-            `;
-          })
-          .join("");
-
-        // 如果有狀態更新，顯示通知（已移到 checkOrderChanges）
-      }
-
-      // 顯示通知（保持原有）
-      function showNotification(message) {
-        // 建立通知元素
-        const notification = document.createElement("div");
-        notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background-color: #1a73e8;
-                color: white;
-                padding: 15px 20px;
-                border-radius: 5px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-                z-index: 10000;
-                animation: slideIn 0.3s ease-out;
-            `;
-        notification.textContent = message;
-
-        document.body.appendChild(notification);
-
-        // 3秒後自動消失
-        setTimeout(() => {
-          notification.style.animation = "slideOut 0.3s ease-out";
-          setTimeout(() => notification.remove(), 300);
-        }, 3000);
-      }
-
-      // === 修改：查看訂單詳情（加入加值服務資訊）===
+      // 查看訂單詳情
       async function viewOrderDetail(orderId) {
         try {
           const response = await fetch(`${API_BASE}/orders/${orderId}`, {
@@ -1327,143 +1360,7 @@
 
           if (response.ok) {
             const order = await response.json();
-
-            // 解析 JSON 如果是字串
-            let calculationResult = order.calculationResult;
-            if (typeof calculationResult === "string") {
-              try {
-                calculationResult = JSON.parse(calculationResult);
-              } catch (e) {
-                calculationResult = {};
-              }
-            }
-
-            const services = parseAdditionalServices(order.additionalServices);
-            const statusMap = {
-              NEEDS_PURCHASE: "需採購清單",
-              PURCHASED: "已採購",
-              IN_WAREHOUSE: "已入庫",
-              NOT_IN_WAREHOUSE: "未入庫",
-              SHIPPED: "已發貨",
-              IN_CUSTOMS: "清關中",
-              DELIVERY_COMPLETE: "派送完成",
-            };
-
-            const statusText =
-              statusMap[order.status] || order.status || "處理中";
-            const amounts = calculateTotalAmount(order);
-
-            // 建立詳細資訊的 HTML
-            let detailHtml = `
-              <div style="max-height: 70vh; overflow-y: auto;">
-                <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳情</h3>
-                
-                <div style="background-color: #e9f5ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                  <p><strong>訂單編號:</strong> ${order.id}</p>
-                  <p><strong>下單時間:</strong> ${new Date(
-                    order.createdAt
-                  ).toLocaleString("zh-TW")}</p>
-                  <p><strong>訂單狀態:</strong> <span class="status-badge status-${
-                    order.status
-                  }">${statusText}</span></p>
-                </div>
-                
-                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                  <h4>收件資訊</h4>
-                  <p><strong>收件人:</strong> ${order.recipientName}</p>
-                  <p><strong>地址:</strong> ${order.address}</p>
-                  <p><strong>電話:</strong> ${order.phone}</p>
-                  ${
-                    order.idNumber
-                      ? `<p><strong>身分證號:</strong> ${order.idNumber}</p>`
-                      : ""
-                  }
-                </div>
-            `;
-
-            // 加值服務資訊
-            if (
-              services &&
-              (services.carryUpstairs?.needed || services.assembly?.needed)
-            ) {
-              detailHtml += `
-                <div class="service-info">
-                  <h4>加值服務</h4>
-              `;
-
-              if (services.carryUpstairs?.needed) {
-                detailHtml += `
-                  <p><strong>搬運上樓：</strong> ${
-                    services.carryUpstairs.floor
-                  }樓 (${
-                  services.carryUpstairs.hasElevator === "yes" ? "有" : "無"
-                }電梯)</p>
-                `;
-              }
-
-              if (services.assembly?.needed) {
-                detailHtml += `
-                  <p><strong>組裝服務：</strong> ${
-                    services.assembly.items || "需要組裝"
-                  }</p>
-                `;
-              }
-
-              if (order.serviceQuoted) {
-                detailHtml += `
-                  <p style="color: green; font-weight: bold;">
-                    ✅ 服務費用已報價：NT$ ${order.serviceQuoteAmount.toLocaleString()}
-                  </p>
-                `;
-              } else {
-                detailHtml += `
-                  <p style="color: orange;">⏳ 服務費用報價中，客服將盡快與您聯繫</p>
-                `;
-              }
-
-              detailHtml += `</div>`;
-            }
-
-            // 費用明細
-            detailHtml += `
-              <div class="price-breakdown">
-                <h4>費用明細</h4>
-                <div class="price-row">
-                  <span>海運費：</span>
-                  <span>NT$ ${(
-                    calculationResult?.finalSeaFreightCost || 0
-                  ).toLocaleString()}</span>
-                </div>
-                <div class="price-row">
-                  <span>偏遠地區費：</span>
-                  <span>NT$ ${(
-                    calculationResult?.remoteFee || 0
-                  ).toLocaleString()}</span>
-                </div>
-            `;
-
-            if (order.serviceQuoted && order.serviceQuoteAmount > 0) {
-              detailHtml += `
-                <div class="price-row">
-                  <span>加值服務費：</span>
-                  <span>NT$ ${order.serviceQuoteAmount.toLocaleString()}</span>
-                </div>
-              `;
-            }
-
-            detailHtml += `
-                <div class="price-row">
-                  <span><strong>總金額：</strong></span>
-                  <span><strong>NT$ ${amounts.total.toLocaleString()}</strong></span>
-                </div>
-              </div>
-            `;
-
-            detailHtml += getStatusProgress(order.status);
-            detailHtml += `</div>`;
-
-            // 使用更友善的彈窗顯示
-            showDetailModal(detailHtml);
+            showOrderDetailModal(order);
           }
         } catch (error) {
           console.error("載入訂單詳情失敗:", error);
@@ -1471,7 +1368,150 @@
         }
       }
 
-      // 顯示訂單進度（保持原有）
+      // 顯示訂單詳情模態框
+      function showOrderDetailModal(order) {
+        let calculationResult = order.calculationResult;
+        if (typeof calculationResult === "string") {
+          try {
+            calculationResult = JSON.parse(calculationResult);
+          } catch (e) {
+            calculationResult = {};
+          }
+        }
+
+        const services = parseAdditionalServices(order.additionalServices);
+        const statusMap = {
+          NEEDS_PURCHASE: "需採購清單",
+          PURCHASED: "已採購",
+          IN_WAREHOUSE: "已入庫",
+          NOT_IN_WAREHOUSE: "未入庫",
+          SHIPPED: "已發貨",
+          IN_CUSTOMS: "清關中",
+          DELIVERY_COMPLETE: "派送完成",
+        };
+
+        const statusText = statusMap[order.status] || order.status || "處理中";
+        const amounts = calculateTotalAmount(order);
+
+        let detailHtml = `
+                <div style="max-height: 70vh; overflow-y: auto;">
+                    <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳情</h3>
+                    
+                    <div style="background-color: #e9f5ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <p><strong>訂單編號:</strong> ${order.id}</p>
+                        <p><strong>下單時間:</strong> ${new Date(
+                          order.createdAt
+                        ).toLocaleString("zh-TW")}</p>
+                        <p><strong>訂單狀態:</strong> <span class="status-badge status-${
+                          order.status
+                        }">${statusText}</span></p>
+                    </div>
+                    
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <h4>收件資訊</h4>
+                        <p><strong>收件人:</strong> ${order.recipientName}</p>
+                        <p><strong>地址:</strong> ${order.address}</p>
+                        <p><strong>電話:</strong> ${order.phone}</p>
+                        ${
+                          order.idNumber
+                            ? `<p><strong>身分證號:</strong> ${order.idNumber}</p>`
+                            : ""
+                        }
+                    </div>
+            `;
+
+        if (
+          services &&
+          (services.carryUpstairs?.needed || services.assembly?.needed)
+        ) {
+          detailHtml += `
+                    <div class="service-info">
+                        <h4>加值服務</h4>
+                `;
+
+          if (services.carryUpstairs?.needed) {
+            detailHtml += `
+                        <p><strong>搬運上樓：</strong> ${
+                          services.carryUpstairs.floor
+                        }樓 (${
+              services.carryUpstairs.hasElevator === "yes" ? "有" : "無"
+            }電梯)</p>
+                    `;
+          }
+
+          if (services.assembly?.needed) {
+            detailHtml += `
+                        <p><strong>組裝服務：</strong> ${
+                          services.assembly.items || "需要組裝"
+                        }</p>
+                    `;
+          }
+
+          if (order.serviceQuoted) {
+            detailHtml += `
+                        <p style="color: green; font-weight: bold;">
+                            ✅ 服務費用已報價：NT$ ${order.serviceQuoteAmount.toLocaleString()}
+                        </p>
+                    `;
+          } else {
+            detailHtml += `
+                        <p style="color: orange;">⏳ 服務費用報價中，客服將盡快與您聯繫</p>
+                    `;
+          }
+
+          detailHtml += `</div>`;
+        }
+
+        detailHtml += `
+                <div class="price-breakdown">
+                    <h4>費用明細</h4>
+                    <div class="price-row">
+                        <span>海運費：</span>
+                        <span>NT$ ${(
+                          calculationResult?.finalSeaFreightCost || 0
+                        ).toLocaleString()}</span>
+                    </div>
+                    <div class="price-row">
+                        <span>偏遠地區費：</span>
+                        <span>NT$ ${(
+                          calculationResult?.remoteFee || 0
+                        ).toLocaleString()}</span>
+                    </div>
+            `;
+
+        if (order.serviceQuoted && order.serviceQuoteAmount > 0) {
+          detailHtml += `
+                    <div class="price-row">
+                        <span>加值服務費：</span>
+                        <span>NT$ ${order.serviceQuoteAmount.toLocaleString()}</span>
+                    </div>
+                `;
+        }
+
+        detailHtml += `
+                    <div class="price-row">
+                        <span><strong>總金額：</strong></span>
+                        <span><strong>NT$ ${amounts.total.toLocaleString()}</strong></span>
+                    </div>
+                </div>
+            `;
+
+        detailHtml += getStatusProgress(order.status);
+        detailHtml += `</div>`;
+
+        const modal = document.createElement("div");
+        modal.className = "modal active";
+        modal.id = "orderDetailModal";
+        modal.innerHTML = `
+                <div class="modal-content">
+                    <button class="modal-close" onclick="document.getElementById('orderDetailModal').remove()">&times;</button>
+                    ${detailHtml}
+                </div>
+            `;
+        document.body.appendChild(modal);
+      }
+
+      // 顯示訂單進度
       function getStatusProgress(status) {
         const statusFlow = [
           { key: "NEEDS_PURCHASE", label: "需採購", icon: "📋" },
@@ -1487,14 +1527,14 @@
         let progressHtml = `
                 <div style="background-color: #fffacd; padding: 15px; border-radius: 5px; margin: 15px 0;">
                     <h4>訂單進度</h4>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; flex-wrap: wrap;">
             `;
 
         statusFlow.forEach((step, index) => {
           const isActive = index <= currentIndex;
           const isCurrent = index === currentIndex;
           progressHtml += `
-                    <div style="text-align: center; flex: 1;">
+                    <div style="text-align: center; flex: 1; min-width: 60px;">
                         <div style="
                             width: 40px;
                             height: 40px;
@@ -1522,15 +1562,6 @@
                             ${step.label}
                         </p>
                     </div>
-                    ${
-                      index < statusFlow.length - 1
-                        ? `
-                        <div style="flex: 1; height: 2px; background-color: ${
-                          index < currentIndex ? "#1a73e8" : "#e0e0e0"
-                        }; margin-top: -20px;"></div>
-                    `
-                        : ""
-                    }
                 `;
         });
 
@@ -1542,69 +1573,7 @@
         return progressHtml;
       }
 
-      // 建立詳情彈窗（保持原有）
-      function showDetailModal(content) {
-        // 移除舊的彈窗（如果存在）
-        const oldModal = document.getElementById("orderDetailModal");
-        if (oldModal) {
-          oldModal.remove();
-        }
-
-        // 建立新彈窗
-        const modal = document.createElement("div");
-        modal.id = "orderDetailModal";
-        modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 9999;
-            `;
-
-        modal.innerHTML = `
-                <div style="
-                    background-color: white;
-                    padding: 30px;
-                    border-radius: 10px;
-                    max-width: 600px;
-                    width: 90%;
-                    max-height: 80vh;
-                    overflow: auto;
-                    position: relative;
-                ">
-                    <button onclick="document.getElementById('orderDetailModal').remove()" style="
-                        position: absolute;
-                        top: 10px;
-                        right: 10px;
-                        background: none;
-                        border: none;
-                        font-size: 24px;
-                        cursor: pointer;
-                        color: #999;
-                    ">×</button>
-                    ${content}
-                </div>
-            `;
-
-        document.body.appendChild(modal);
-
-        // 點擊背景關閉
-        modal.addEventListener("click", (e) => {
-          if (e.target === modal) {
-            modal.remove();
-          }
-        });
-      }
-
-      // 以下函式保持原有不變...
-      // openEditProfile, editProfileForm, openChangePassword, changePasswordForm, logoutBtn, closeModal, showMessage, clearMessage
-
-      // 開啟編輯資料視窗（保持原有）
+      // 開啟編輯資料視窗
       function openEditProfile() {
         document.getElementById("editName").value = currentUser.name || "";
         document.getElementById("editPhone").value = currentUser.phone || "";
@@ -1617,10 +1586,10 @@
         document.getElementById("editProfileModal").classList.add("active");
       }
 
-      // 編輯資料表單提交（保持原有）
+      // 編輯資料表單提交
       document
         .getElementById("editProfileForm")
-        .addEventListener("submit", async (e) => {
+        ?.addEventListener("submit", async (e) => {
           e.preventDefault();
 
           const formData = {
@@ -1653,15 +1622,15 @@
           }
         });
 
-      // 開啟修改密碼視窗（保持原有）
+      // 開啟修改密碼視窗
       function openChangePassword() {
         document.getElementById("changePasswordModal").classList.add("active");
       }
 
-      // 修改密碼表單提交（保持原有）
+      // 修改密碼表單提交
       document
         .getElementById("changePasswordForm")
-        .addEventListener("submit", async (e) => {
+        ?.addEventListener("submit", async (e) => {
           e.preventDefault();
 
           const currentPassword =
@@ -1699,12 +1668,10 @@
           }
         });
 
-      // 登出（保持原有）
-      document.getElementById("logoutBtn").addEventListener("click", () => {
+      // 登出
+      document.getElementById("logoutBtn")?.addEventListener("click", () => {
         if (confirm("確定要登出嗎？")) {
-          // 停止自動更新
           stopAutoRefresh();
-
           localStorage.removeItem("customerToken");
           authToken = null;
           currentUser = null;
@@ -1712,23 +1679,36 @@
         }
       });
 
-      // 關閉 Modal（保持原有）
+      // 關閉 Modal
       function closeModal(modalId) {
         document.getElementById(modalId).classList.remove("active");
       }
 
-      // 顯示訊息（保持原有）
+      // 顯示訊息
       function showMessage(text, type) {
         const messageBox = document.getElementById("messageBox");
         messageBox.textContent = text;
         messageBox.className = `message ${type}`;
       }
 
-      // 清除訊息（保持原有）
+      // 清除訊息
       function clearMessage() {
         const messageBox = document.getElementById("messageBox");
         messageBox.className = "message";
         messageBox.textContent = "";
+      }
+
+      // 顯示通知
+      function showNotification(message) {
+        const notification = document.createElement("div");
+        notification.className = "notification";
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+          notification.style.animation = "slideOut 0.3s ease-out";
+          setTimeout(() => notification.remove(), 300);
+        }, 3000);
       }
     </script>
   </body>
