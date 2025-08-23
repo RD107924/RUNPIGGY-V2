@@ -20,23 +20,28 @@ model User {
 
   // 建立 User 和 ShipmentOrder 之間的一對多關聯
   assignedOrders ShipmentOrder[] @relation("AssignedOrders")
+  
+  // 新增：審計日誌關聯
+  auditLogs     AuditLog[]      @relation("PerformedActions")
 
   @@map("users")
 }
 
 // 客戶會員資料模型
 model Customer {
-  id              String    @id @default(cuid())
-  email           String    @unique // 會員電子郵件，用於登入
-  passwordHash    String    // 加密後的密碼
-  name            String    // 會員姓名
-  phone           String?   // 聯絡電話
-  lineNickname    String?   // LINE 暱稱
-  defaultAddress  String?   // 預設地址
-  idNumber        String?   // 身分證字號
-  isActive        Boolean   @default(true) // 帳號狀態
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique // 會員電子郵件，用於登入
+  passwordHash       String    // 加密後的密碼
+  name               String    // 會員姓名
+  phone              String?   // 聯絡電話
+  lineNickname       String?   // LINE 暱稱
+  defaultAddress     String?   // 預設地址
+  idNumber           String?   // 身分證字號
+  isActive           Boolean   @default(true) // 帳號狀態
+  needPasswordChange Boolean   @default(false) // 新增：是否需要強制修改密碼
+  passwordResetAt    DateTime? // 新增：密碼重設時間
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // 建立 Customer 和 ShipmentOrder 之間的一對多關聯
   orders ShipmentOrder[] @relation("CustomerOrders")
@@ -84,4 +89,23 @@ model CalculationQuote {
   calculationResult String    // SQLite 改用 String 儲存 JSON
 
   @@map("calculation_quotes")
+}
+
+// 新增：審計日誌表（用於記錄重要操作）
+model AuditLog {
+  id            String   @id @default(cuid())
+  action        String   // 操作類型 (如: PASSWORD_RESET, STATUS_CHANGE)
+  targetType    String   // 目標類型 (如: CUSTOMER, ORDER)
+  targetId      String   // 目標ID
+  performedById String   // 執行操作的管理員ID
+  performedBy   User     @relation("PerformedActions", fields: [performedById], references: [id])
+  details       String?  // JSON 格式的額外資訊
+  ipAddress     String?  // 操作者的IP位址
+  userAgent     String?  // 操作者的瀏覽器資訊
+  createdAt     DateTime @default(now())
+
+  @@index([action])
+  @@index([targetId])
+  @@index([performedById])
+  @@map("audit_logs")
 }

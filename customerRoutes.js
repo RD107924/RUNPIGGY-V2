@@ -1,6 +1,6 @@
-require('dotenv').config();
+require("dotenv").config();
 // customerRoutes.js (SQLite 相容版本)
-require('dotenv').config(); // 確保讀取環境變數
+require("dotenv").config(); // 確保讀取環境變數
 
 const express = require("express");
 const bcrypt = require("bcryptjs");
@@ -23,7 +23,8 @@ router.get("/test", (req, res) => {
 // 會員註冊
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, name, phone, lineNickname, address, idNumber } = req.body;
+    const { email, password, name, phone, lineNickname, address, idNumber } =
+      req.body;
 
     // 驗證必填欄位
     if (!email || !password || !name) {
@@ -43,7 +44,7 @@ router.post("/register", async (req, res) => {
 
     // 檢查 email 是否已存在
     const existingCustomer = await prisma.customer.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingCustomer) {
@@ -63,7 +64,7 @@ router.post("/register", async (req, res) => {
         phone,
         lineNickname,
         defaultAddress: address,
-        idNumber
+        idNumber,
       },
       select: {
         id: true,
@@ -71,17 +72,17 @@ router.post("/register", async (req, res) => {
         name: true,
         phone: true,
         lineNickname: true,
-        createdAt: true
-      }
+        createdAt: true,
+      },
     });
 
     // 產生 JWT token
     const token = jwt.sign(
-      { 
-        id: customer.id, 
-        email: customer.email, 
+      {
+        id: customer.id,
+        email: customer.email,
         name: customer.name,
-        type: 'customer' 
+        type: "customer",
       },
       process.env.JWT_SECRET,
       { expiresIn: "30d" }
@@ -90,7 +91,7 @@ router.post("/register", async (req, res) => {
     res.status(201).json({
       message: "註冊成功",
       customer,
-      token
+      token,
     });
   } catch (error) {
     console.error("註冊失敗:", error);
@@ -98,7 +99,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// 會員登入
+// 會員登入（更新：加入密碼重設檢查）
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -107,9 +108,21 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "請提供電子郵件和密碼" });
     }
 
-    // 查找會員
+    // 查找會員（新增查詢 needPasswordChange 和 passwordResetAt）
     const customer = await prisma.customer.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        name: true,
+        phone: true,
+        lineNickname: true,
+        defaultAddress: true,
+        isActive: true,
+        needPasswordChange: true, // 新增
+        passwordResetAt: true, // 新增
+      },
     });
 
     if (!customer) {
@@ -127,29 +140,45 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ error: "電子郵件或密碼錯誤" });
     }
 
-    // 產生 JWT token
+    // 新增：檢查是否使用預設密碼且已過期（24小時）
+    if (customer.needPasswordChange && customer.passwordResetAt) {
+      const hoursSinceReset =
+        (Date.now() - new Date(customer.passwordResetAt).getTime()) /
+        (1000 * 60 * 60);
+
+      if (hoursSinceReset > 24) {
+        // 預設密碼已過期
+        return res.status(401).json({
+          error: "預設密碼已過期，請聯繫管理員重新設定",
+          code: "PASSWORD_EXPIRED",
+        });
+      }
+    }
+
+    // 產生 JWT token（如果需要修改密碼，token 有效期縮短）
     const token = jwt.sign(
-      { 
-        id: customer.id, 
-        email: customer.email, 
+      {
+        id: customer.id,
+        email: customer.email,
         name: customer.name,
-        type: 'customer' 
+        type: "customer",
       },
       process.env.JWT_SECRET,
-      { expiresIn: "30d" }
+      { expiresIn: customer.needPasswordChange ? "1h" : "30d" } // 修改：根據狀態調整有效期
     );
 
     res.json({
-      message: "登入成功",
+      message: customer.needPasswordChange ? "請立即修改密碼" : "登入成功", // 修改：根據狀態顯示訊息
+      requirePasswordChange: customer.needPasswordChange, // 新增：告知前端是否需要強制修改密碼
       customer: {
         id: customer.id,
         email: customer.email,
         name: customer.name,
         phone: customer.phone,
         lineNickname: customer.lineNickname,
-        defaultAddress: customer.defaultAddress
+        defaultAddress: customer.defaultAddress,
       },
-      token
+      token,
     });
   } catch (error) {
     console.error("登入失敗:", error);
@@ -170,8 +199,9 @@ router.get("/profile", authenticateCustomer, async (req, res) => {
         lineNickname: true,
         defaultAddress: true,
         idNumber: true,
-        createdAt: true
-      }
+        needPasswordChange: true, // 新增：讓前端知道是否需要修改密碼
+        createdAt: true,
+      },
     });
 
     if (!customer) {
@@ -197,7 +227,7 @@ router.put("/profile", authenticateCustomer, async (req, res) => {
         phone,
         lineNickname,
         defaultAddress,
-        idNumber
+        idNumber,
       },
       select: {
         id: true,
@@ -206,13 +236,13 @@ router.put("/profile", authenticateCustomer, async (req, res) => {
         phone: true,
         lineNickname: true,
         defaultAddress: true,
-        idNumber: true
-      }
+        idNumber: true,
+      },
     });
 
     res.json({
       message: "資料更新成功",
-      customer: updatedCustomer
+      customer: updatedCustomer,
     });
   } catch (error) {
     console.error("更新會員資料失敗:", error);
@@ -220,7 +250,7 @@ router.put("/profile", authenticateCustomer, async (req, res) => {
   }
 });
 
-// 修改密碼（需要驗證）
+// 修改密碼（更新：加入預設密碼檢查和清除強制修改標記）
 router.put("/change-password", authenticateCustomer, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -233,13 +263,27 @@ router.put("/change-password", authenticateCustomer, async (req, res) => {
       return res.status(400).json({ error: "新密碼長度至少需要 6 個字元" });
     }
 
-    // 獲取會員資料
+    // 新增：不允許使用預設密碼作為新密碼
+    if (newPassword === "88888888") {
+      return res.status(400).json({ error: "不能使用預設密碼作為新密碼" });
+    }
+
+    // 獲取會員資料（新增查詢 needPasswordChange）
     const customer = await prisma.customer.findUnique({
-      where: { id: req.customer.id }
+      where: { id: req.customer.id },
+      select: {
+        id: true,
+        passwordHash: true,
+        needPasswordChange: true, // 新增
+        email: true, // 新增：用於記錄
+      },
     });
 
     // 驗證目前密碼
-    const validPassword = await bcrypt.compare(currentPassword, customer.passwordHash);
+    const validPassword = await bcrypt.compare(
+      currentPassword,
+      customer.passwordHash
+    );
     if (!validPassword) {
       return res.status(400).json({ error: "目前密碼錯誤" });
     }
@@ -248,13 +292,56 @@ router.put("/change-password", authenticateCustomer, async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const newPasswordHash = await bcrypt.hash(newPassword, salt);
 
-    // 更新密碼
+    // 更新密碼（新增：清除強制修改標記）
     await prisma.customer.update({
       where: { id: req.customer.id },
-      data: { passwordHash: newPasswordHash }
+      data: {
+        passwordHash: newPasswordHash,
+        needPasswordChange: false, // 新增：清除強制修改標記
+        passwordResetAt: null, // 新增：清除重設時間
+      },
     });
 
-    res.json({ message: "密碼修改成功" });
+    // 新增：記錄密碼修改（用於審計）
+    if (customer.needPasswordChange) {
+      console.log(
+        `[密碼修改] ${new Date().toISOString()} - 會員 ${
+          customer.email
+        } 已從預設密碼修改為新密碼`
+      );
+    } else {
+      console.log(
+        `[密碼修改] ${new Date().toISOString()} - 會員 ${
+          customer.email
+        } 已修改密碼`
+      );
+    }
+
+    // 新增：嘗試記錄到審計日誌（如果有 AuditLog 表）
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: "PASSWORD_CHANGED",
+          targetType: "CUSTOMER",
+          targetId: req.customer.id,
+          performedById: req.customer.id, // 會員自己修改
+          details: JSON.stringify({
+            wasForced: customer.needPasswordChange,
+            changedAt: new Date(),
+          }),
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.headers["user-agent"],
+        },
+      });
+    } catch (auditError) {
+      // 如果沒有 AuditLog 表，忽略錯誤
+      console.log(`[審計日誌] 無法寫入: ${auditError.message}`);
+    }
+
+    res.json({
+      message: "密碼修改成功",
+      needPasswordChange: false, // 新增：告知前端已不需要強制修改
+    });
   } catch (error) {
     console.error("修改密碼失敗:", error);
     res.status(500).json({ error: "伺服器內部錯誤" });
@@ -274,16 +361,17 @@ router.get("/orders", authenticateCustomer, async (req, res) => {
         address: true,
         phone: true,
         status: true,
-        calculationResult: true
-      }
+        calculationResult: true,
+      },
     });
 
     // 解析 JSON 字串
-    const ordersWithParsedJson = orders.map(order => ({
+    const ordersWithParsedJson = orders.map((order) => ({
       ...order,
-      calculationResult: typeof order.calculationResult === 'string'
-        ? JSON.parse(order.calculationResult)
-        : order.calculationResult
+      calculationResult:
+        typeof order.calculationResult === "string"
+          ? JSON.parse(order.calculationResult)
+          : order.calculationResult,
     }));
 
     res.json(ordersWithParsedJson);
@@ -299,8 +387,8 @@ router.get("/orders/:id", authenticateCustomer, async (req, res) => {
     const order = await prisma.shipmentOrder.findFirst({
       where: {
         id: req.params.id,
-        customerId: req.customer.id
-      }
+        customerId: req.customer.id,
+      },
     });
 
     if (!order) {
@@ -310,9 +398,10 @@ router.get("/orders/:id", authenticateCustomer, async (req, res) => {
     // 解析 JSON 字串
     const orderWithParsedJson = {
       ...order,
-      calculationResult: typeof order.calculationResult === 'string'
-        ? JSON.parse(order.calculationResult)
-        : order.calculationResult
+      calculationResult:
+        typeof order.calculationResult === "string"
+          ? JSON.parse(order.calculationResult)
+          : order.calculationResult,
     };
 
     res.json(orderWithParsedJson);
@@ -332,9 +421,9 @@ function authenticateCustomer(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // 確認是會員 token (而非管理員)
-    if (decoded.type !== 'customer') {
+    if (decoded.type !== "customer") {
       return res.status(403).json({ error: "無效的會員權限" });
     }
 

@@ -1,895 +1,1137 @@
-        <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>會員中心 - 小跑豬</title>
-    <link rel="icon" type="image/png" href="/assets/logo.png">
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: "Helvetica Neue", Arial, "Heiti TC", "Microsoft JhengHei", sans-serif;
-            background-color: #f4f7f9;
-            color: #333;
-            padding: 20px;
-        }
+      body {
+        font-family: "Helvetica Neue", Arial, "Heiti TC", "Microsoft JhengHei",
+          sans-serif;
+        background-color: #f4f7f9;
+        color: #333;
+        padding: 20px;
+      }
 
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .logo {
+        max-width: 120px;
+        height: auto;
+      }
+
+      h1 {
+        color: #1a73e8;
+        font-size: 2em;
+      }
+
+      .auth-section {
+        display: none;
+        margin-bottom: 30px;
+      }
+
+      .auth-section.active {
+        display: block;
+      }
+
+      .auth-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .tab-btn {
+        padding: 10px 20px;
+        border: none;
+        background-color: #e9ecef;
+        color: #333;
+        cursor: pointer;
+        border-radius: 5px;
+        font-size: 16px;
+        transition: all 0.3s;
+      }
+
+      .tab-btn.active {
+        background-color: #1a73e8;
+        color: white;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        color: #666;
+        font-size: 14px;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #1a73e8;
+      }
+
+      .btn {
+        padding: 12px 25px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .btn-primary {
+        background-color: #1a73e8;
+        color: white;
+        width: 100%;
+      }
+
+      .btn-primary:hover {
+        background-color: #1558b8;
+      }
+
+      .btn-secondary {
+        background-color: #2ecc71;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background-color: #27ae60;
+      }
+
+      .btn-danger {
+        background-color: #e74c3c;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background-color: #c0392b;
+      }
+
+      .message {
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+        display: none;
+      }
+
+      .message.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+      }
+
+      .message.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+      }
+
+      .dashboard {
+        display: none;
+      }
+
+      .dashboard.active {
+        display: block;
+      }
+
+      .user-info {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+      }
+
+      .user-info h2 {
+        color: #1a73e8;
+        margin-bottom: 15px;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .info-row:last-child {
+        border-bottom: none;
+      }
+
+      .orders-section {
+        margin-top: 30px;
+      }
+
+      .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .orders-table th,
+      .orders-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .orders-table th {
+        background-color: #1a73e8;
+        color: white;
+      }
+
+      .orders-table tr:hover {
+        background-color: #f8f9fa;
+      }
+
+      .status-badge {
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .status-NEEDS_PURCHASE {
+        background-color: #ffc107;
+        color: #333;
+      }
+
+      .status-PURCHASED {
+        background-color: #17a2b8;
+        color: white;
+      }
+
+      .status-IN_WAREHOUSE {
+        background-color: #6c757d;
+        color: white;
+      }
+
+      .status-SHIPPED {
+        background-color: #007bff;
+        color: white;
+      }
+
+      .status-IN_CUSTOMS {
+        background-color: #fd7e14;
+        color: white;
+      }
+
+      .status-DELIVERY_COMPLETE {
+        background-color: #28a745;
+        color: white;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background-color: #fff;
+        padding: 30px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 2em;
+        cursor: pointer;
+        color: #999;
+      }
+
+      .modal-close:hover {
+        color: #333;
+      }
+
+      .quick-order-btn {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        width: 60px;
+        height: 60px;
+        background-color: #1a73e8;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: transform 0.2s;
+        color: white;
+        font-size: 24px;
+        text-decoration: none;
+      }
+
+      .quick-order-btn:hover {
+        transform: scale(1.1);
+      }
+
+      @media (max-width: 768px) {
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .logo {
-            max-width: 120px;
-            height: auto;
+          padding: 15px;
         }
 
         h1 {
-            color: #1a73e8;
-            font-size: 2em;
+          font-size: 1.5em;
         }
 
-        .auth-section {
-            display: none;
-            margin-bottom: 30px;
-        }
-
-        .auth-section.active {
-            display: block;
-        }
-
-        .auth-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background-color: #e9ecef;
-            color: #333;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-
-        .tab-btn.active {
-            background-color: #1a73e8;
-            color: white;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666;
-            font-size: 14px;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #1a73e8;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .btn-primary {
-            background-color: #1a73e8;
-            color: white;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background-color: #1558b8;
-        }
-
-        .btn-secondary {
-            background-color: #2ecc71;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #27ae60;
-        }
-
-        .btn-danger {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background-color: #c0392b;
-        }
-
-        .message {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 5px;
-            display: none;
-        }
-
-        .message.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
-        }
-
-        .message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-
-        .dashboard {
-            display: none;
-        }
-
-        .dashboard.active {
-            display: block;
-        }
-
-        .user-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-
-        .user-info h2 {
-            color: #1a73e8;
-            margin-bottom: 15px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .orders-section {
-            margin-top: 30px;
+        .header {
+          flex-direction: column;
+          text-align: center;
         }
 
         .orders-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+          font-size: 14px;
         }
 
         .orders-table th,
         .orders-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+          padding: 8px;
+        }
+      }
+
+      /* 動畫效果 */
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
+      /* 狀態更新高亮效果 */
+      .status-updated {
+        animation: highlight 2s ease-out;
+      }
+
+      @keyframes highlight {
+        0% {
+          background-color: #ffffcc;
+        }
+        100% {
+          background-color: transparent;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img src="/assets/logo.png" alt="小跑豬 LOGO" class="logo" />
+        <h1>會員中心</h1>
+        <div id="headerButtons">
+          <a
+            href="/"
+            class="btn btn-secondary"
+            style="text-decoration: none; margin-right: 10px"
+            >返回首頁</a
+          >
+          <button id="logoutBtn" class="btn btn-danger" style="display: none">
+            登出
+          </button>
+        </div>
+      </div>
+
+      <!-- 登入/註冊區塊 -->
+      <div id="authSection" class="auth-section active">
+        <div class="auth-tabs">
+          <button class="tab-btn active" onclick="switchTab('login')">
+            會員登入
+          </button>
+          <button class="tab-btn" onclick="switchTab('register')">
+            註冊新會員
+          </button>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+
+        <!-- 登入表單 -->
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail">電子郵件</label>
+            <input type="email" id="loginEmail" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">密碼</label>
+            <input type="password" id="loginPassword" required />
+          </div>
+          <button type="submit" class="btn btn-primary">登入</button>
+          <div style="text-align: center; margin-top: 15px">
+            <a href="/" style="color: #666; text-decoration: none"
+              >← 返回計算器首頁</a
+            >
+          </div>
+        </form>
+
+        <!-- 註冊表單 -->
+        <form id="registerForm" style="display: none">
+          <div class="form-group">
+            <label for="regName">姓名 *</label>
+            <input type="text" id="regName" required />
+          </div>
+          <div class="form-group">
+            <label for="regEmail">電子郵件 *</label>
+            <input type="email" id="regEmail" required />
+          </div>
+          <div class="form-group">
+            <label for="regPassword">密碼 * (至少6個字元)</label>
+            <input type="password" id="regPassword" minlength="6" required />
+          </div>
+          <div class="form-group">
+            <label for="regPhone">聯絡電話</label>
+            <input type="tel" id="regPhone" />
+          </div>
+          <div class="form-group">
+            <label for="regLine">LINE 暱稱</label>
+            <input type="text" id="regLine" />
+          </div>
+          <div class="form-group">
+            <label for="regAddress">預設地址</label>
+            <input type="text" id="regAddress" />
+          </div>
+          <div class="form-group">
+            <label for="regIdNumber">身分證字號 (選填，清關用)</label>
+            <input type="text" id="regIdNumber" />
+          </div>
+          <button type="submit" class="btn btn-primary">註冊</button>
+          <div style="text-align: center; margin-top: 15px">
+            <a href="/" style="color: #666; text-decoration: none"
+              >← 返回計算器首頁</a
+            >
+          </div>
+        </form>
+      </div>
+
+      <!-- 會員儀表板 -->
+      <div id="dashboard" class="dashboard">
+        <div class="user-info">
+          <h2>會員資料</h2>
+          <div class="info-row">
+            <span>姓名：</span>
+            <span id="userName">-</span>
+          </div>
+          <div class="info-row">
+            <span>電子郵件：</span>
+            <span id="userEmail">-</span>
+          </div>
+          <div class="info-row">
+            <span>電話：</span>
+            <span id="userPhone">-</span>
+          </div>
+          <div class="info-row">
+            <span>LINE 暱稱：</span>
+            <span id="userLine">-</span>
+          </div>
+          <div class="info-row">
+            <span>預設地址：</span>
+            <span id="userAddress">-</span>
+          </div>
+          <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="openEditProfile()">
+              編輯資料
+            </button>
+            <button class="btn btn-secondary" onclick="openChangePassword()">
+              修改密碼
+            </button>
+            <a href="/" class="btn btn-secondary" style="text-decoration: none"
+              >返回首頁計算器</a
+            >
+          </div>
+        </div>
+
+        <div class="orders-section">
+          <h2>我的訂單</h2>
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 10px;
+            "
+          >
+            <div style="display: flex; align-items: center; gap: 10px">
+              <label
+                style="display: flex; align-items: center; cursor: pointer"
+              >
+                <input
+                  type="checkbox"
+                  id="autoRefresh"
+                  checked
+                  style="margin-right: 5px"
+                />
+                <span>自動更新（每30秒）</span>
+              </label>
+              <span
+                id="lastUpdateTime"
+                style="color: #666; font-size: 14px"
+              ></span>
+            </div>
+            <button
+              class="btn btn-secondary"
+              onclick="loadOrders()"
+              style="padding: 8px 15px"
+            >
+              🔄 立即重新整理
+            </button>
+          </div>
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>訂單編號</th>
+                <th>下單時間</th>
+                <th>收件人</th>
+                <th>金額</th>
+                <th>狀態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 編輯資料 Modal -->
+    <div id="editProfileModal" class="modal">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeModal('editProfileModal')"
+          >&times;</span
+        >
+        <h2>編輯會員資料</h2>
+        <form id="editProfileForm">
+          <div class="form-group">
+            <label for="editName">姓名</label>
+            <input type="text" id="editName" required />
+          </div>
+          <div class="form-group">
+            <label for="editPhone">聯絡電話</label>
+            <input type="tel" id="editPhone" />
+          </div>
+          <div class="form-group">
+            <label for="editLine">LINE 暱稱</label>
+            <input type="text" id="editLine" />
+          </div>
+          <div class="form-group">
+            <label for="editAddress">預設地址</label>
+            <input type="text" id="editAddress" />
+          </div>
+          <div class="form-group">
+            <label for="editIdNumber">身分證字號</label>
+            <input type="text" id="editIdNumber" />
+          </div>
+          <button type="submit" class="btn btn-primary">儲存變更</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 修改密碼 Modal -->
+    <div id="changePasswordModal" class="modal">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeModal('changePasswordModal')"
+          >&times;</span
+        >
+        <h2>修改密碼</h2>
+        <form id="changePasswordForm">
+          <div class="form-group">
+            <label for="currentPassword">目前密碼</label>
+            <input type="password" id="currentPassword" required />
+          </div>
+          <div class="form-group">
+            <label for="newPassword">新密碼 (至少6個字元)</label>
+            <input type="password" id="newPassword" minlength="6" required />
+          </div>
+          <div class="form-group">
+            <label for="confirmPassword">確認新密碼</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              minlength="6"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">確認修改</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 快速下單按鈕 -->
+    <a href="/" class="quick-order-btn" title="快速試算下單">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M5 12h14" />
+        <path d="M12 5v14" />
+      </svg>
+    </a>
+
+    <script>
+      const API_BASE = "/api/customers";
+      let currentUser = null;
+      let authToken = localStorage.getItem("customerToken");
+      let autoRefreshInterval = null;
+
+      // 頁面載入時檢查登入狀態
+      window.addEventListener("DOMContentLoaded", () => {
+        if (authToken) {
+          checkAuthStatus();
         }
 
-        .orders-table th {
-            background-color: #1a73e8;
-            color: white;
+        // 設定自動更新勾選框
+        const autoRefreshCheckbox = document.getElementById("autoRefresh");
+        if (autoRefreshCheckbox) {
+          // 讀取用戶偏好設定
+          const savedPreference = localStorage.getItem("autoRefreshEnabled");
+          if (savedPreference !== null) {
+            autoRefreshCheckbox.checked = savedPreference === "true";
+          }
+
+          autoRefreshCheckbox.addEventListener("change", (e) => {
+            localStorage.setItem("autoRefreshEnabled", e.target.checked);
+            if (e.target.checked) {
+              startAutoRefresh();
+            } else {
+              stopAutoRefresh();
+            }
+          });
+        }
+      });
+
+      // 檢查登入狀態
+      async function checkAuthStatus() {
+        try {
+          const response = await fetch(`${API_BASE}/profile`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+
+          if (response.ok) {
+            currentUser = await response.json();
+            showDashboard();
+          } else {
+            localStorage.removeItem("customerToken");
+            authToken = null;
+          }
+        } catch (error) {
+          console.error("檢查登入狀態失敗:", error);
+        }
+      }
+
+      // 切換登入/註冊標籤
+      function switchTab(tab) {
+        const tabs = document.querySelectorAll(".tab-btn");
+        const loginForm = document.getElementById("loginForm");
+        const registerForm = document.getElementById("registerForm");
+
+        tabs.forEach((t) => t.classList.remove("active"));
+
+        if (tab === "login") {
+          tabs[0].classList.add("active");
+          loginForm.style.display = "block";
+          registerForm.style.display = "none";
+        } else {
+          tabs[1].classList.add("active");
+          loginForm.style.display = "none";
+          registerForm.style.display = "block";
         }
 
-        .orders-table tr:hover {
-            background-color: #f8f9fa;
-        }
+        clearMessage();
+      }
 
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: bold;
-        }
+      // 登入處理
+      document
+        .getElementById("loginForm")
+        ?.addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-        .status-NEEDS_PURCHASE {
-            background-color: #ffc107;
-            color: #333;
-        }
+          const email = document.getElementById("loginEmail").value;
+          const password = document.getElementById("loginPassword").value;
 
-        .status-PURCHASED {
-            background-color: #17a2b8;
-            color: white;
-        }
+          try {
+            const response = await fetch(`${API_BASE}/login`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email, password }),
+            });
 
-        .status-IN_WAREHOUSE {
-            background-color: #6c757d;
-            color: white;
-        }
+            const data = await response.json();
 
-        .status-SHIPPED {
-            background-color: #007bff;
-            color: white;
-        }
+            if (response.ok) {
+              localStorage.setItem("customerToken", data.token);
+              authToken = data.token;
+              currentUser = data.customer;
 
-        .status-IN_CUSTOMS {
-            background-color: #fd7e14;
-            color: white;
-        }
+              // 新增：檢查是否需要強制修改密碼
+              if (data.requirePasswordChange) {
+                showMessage("請先修改密碼以確保帳號安全", "success");
+                // 顯示強制修改密碼的對話框
+                showForcePasswordChangeModal();
+              } else {
+                showMessage("登入成功！", "success");
+                setTimeout(() => showDashboard(), 1000);
+              }
+            } else {
+              // 特別處理密碼過期的錯誤
+              if (data.code === "PASSWORD_EXPIRED") {
+                showMessage(
+                  "預設密碼已過期（超過24小時），請聯繫管理員重新設定",
+                  "error"
+                );
+              } else {
+                showMessage(data.error || "登入失敗", "error");
+              }
+            }
+          } catch (error) {
+            showMessage("網路錯誤，請稍後再試", "error");
+          }
+        });
 
-        .status-DELIVERY_COMPLETE {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .modal {
-            display: none;
+      // 新增：顯示強制修改密碼的 Modal
+      function showForcePasswordChangeModal() {
+        // 建立 Modal HTML
+        const modalHtml = `
+        <div id="forcePasswordChangeModal" style="
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-            position: relative;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 2em;
-            cursor: pointer;
-            color: #999;
-        }
-
-        .modal-close:hover {
-            color: #333;
-        }
-
-        .quick-order-btn {
-            position: fixed;
-            bottom: 25px;
-            right: 25px;
-            width: 60px;
-            height: 60px;
-            background-color: #1a73e8;
-            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            cursor: pointer;
-            transition: transform 0.2s;
-            color: white;
-            font-size: 24px;
-            text-decoration: none;
-        }
-
-        .quick-order-btn:hover {
-            transform: scale(1.1);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            h1 {
-                font-size: 1.5em;
-            }
-
-            .header {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .orders-table {
-                font-size: 14px;
-            }
-
-            .orders-table th,
-            .orders-table td {
-                padding: 8px;
-            }
-        }
-        
-        /* 動畫效果 */
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes slideOut {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-        
-        /* 狀態更新高亮效果 */
-        .status-updated {
-            animation: highlight 2s ease-out;
-        }
-        
-        @keyframes highlight {
-            0% {
-                background-color: #ffffcc;
-            }
-            100% {
-                background-color: transparent;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="/assets/logo.png" alt="小跑豬 LOGO" class="logo">
-            <h1>會員中心</h1>
-            <div id="headerButtons">
-                <a href="/" class="btn btn-secondary" style="text-decoration: none; margin-right: 10px;">返回首頁</a>
-                <button id="logoutBtn" class="btn btn-danger" style="display: none;">登出</button>
-            </div>
-        </div>
-
-        <!-- 登入/註冊區塊 -->
-        <div id="authSection" class="auth-section active">
-            <div class="auth-tabs">
-                <button class="tab-btn active" onclick="switchTab('login')">會員登入</button>
-                <button class="tab-btn" onclick="switchTab('register')">註冊新會員</button>
-            </div>
-
-            <div id="messageBox" class="message"></div>
-
-            <!-- 登入表單 -->
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="loginEmail">電子郵件</label>
-                    <input type="email" id="loginEmail" required>
+            z-index: 10000;
+        ">
+            <div style="
+                background-color: #fff;
+                padding: 30px;
+                border-radius: 10px;
+                width: 90%;
+                max-width: 450px;
+            ">
+                <h2 style="color: #e74c3c; margin-top: 0;">⚠️ 必須修改密碼</h2>
+                
+                <div style="
+                    background-color: #fff3cd;
+                    border: 1px solid #ffc107;
+                    color: #856404;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin-bottom: 20px;
+                ">
+                    <strong>安全提醒：</strong><br>
+                    您目前使用的是系統預設密碼，為了您的帳號安全，請立即設定新密碼。
                 </div>
-                <div class="form-group">
-                    <label for="loginPassword">密碼</label>
-                    <input type="password" id="loginPassword" required>
-                </div>
-                <button type="submit" class="btn btn-primary">登入</button>
-                <div style="text-align: center; margin-top: 15px;">
-                    <a href="/" style="color: #666; text-decoration: none;">← 返回計算器首頁</a>
-                </div>
-            </form>
-
-            <!-- 註冊表單 -->
-            <form id="registerForm" style="display: none;">
-                <div class="form-group">
-                    <label for="regName">姓名 *</label>
-                    <input type="text" id="regName" required>
-                </div>
-                <div class="form-group">
-                    <label for="regEmail">電子郵件 *</label>
-                    <input type="email" id="regEmail" required>
-                </div>
-                <div class="form-group">
-                    <label for="regPassword">密碼 * (至少6個字元)</label>
-                    <input type="password" id="regPassword" minlength="6" required>
-                </div>
-                <div class="form-group">
-                    <label for="regPhone">聯絡電話</label>
-                    <input type="tel" id="regPhone">
-                </div>
-                <div class="form-group">
-                    <label for="regLine">LINE 暱稱</label>
-                    <input type="text" id="regLine">
-                </div>
-                <div class="form-group">
-                    <label for="regAddress">預設地址</label>
-                    <input type="text" id="regAddress">
-                </div>
-                <div class="form-group">
-                    <label for="regIdNumber">身分證字號 (選填，清關用)</label>
-                    <input type="text" id="regIdNumber">
-                </div>
-                <button type="submit" class="btn btn-primary">註冊</button>
-                <div style="text-align: center; margin-top: 15px;">
-                    <a href="/" style="color: #666; text-decoration: none;">← 返回計算器首頁</a>
-                </div>
-            </form>
-        </div>
-
-        <!-- 會員儀表板 -->
-        <div id="dashboard" class="dashboard">
-            <div class="user-info">
-                <h2>會員資料</h2>
-                <div class="info-row">
-                    <span>姓名：</span>
-                    <span id="userName">-</span>
-                </div>
-                <div class="info-row">
-                    <span>電子郵件：</span>
-                    <span id="userEmail">-</span>
-                </div>
-                <div class="info-row">
-                    <span>電話：</span>
-                    <span id="userPhone">-</span>
-                </div>
-                <div class="info-row">
-                    <span>LINE 暱稱：</span>
-                    <span id="userLine">-</span>
-                </div>
-                <div class="info-row">
-                    <span>預設地址：</span>
-                    <span id="userAddress">-</span>
-                </div>
-                <div class="action-buttons">
-                    <button class="btn btn-secondary" onclick="openEditProfile()">編輯資料</button>
-                    <button class="btn btn-secondary" onclick="openChangePassword()">修改密碼</button>
-                    <a href="/" class="btn btn-secondary" style="text-decoration: none;">返回首頁計算器</a>
-                </div>
-            </div>
-
-            <div class="orders-section">
-                <h2>我的訂單</h2>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="display: flex; align-items: center; cursor: pointer;">
-                            <input type="checkbox" id="autoRefresh" checked style="margin-right: 5px;">
-                            <span>自動更新（每30秒）</span>
-                        </label>
-                        <span id="lastUpdateTime" style="color: #666; font-size: 14px;"></span>
+                
+                <form id="forceChangePasswordForm">
+                    <div class="form-group">
+                        <label for="currentDefaultPassword">目前密碼（預設密碼）</label>
+                        <input type="password" id="currentDefaultPassword" required>
                     </div>
-                    <button class="btn btn-secondary" onclick="loadOrders()" style="padding: 8px 15px;">
-                        🔄 立即重新整理
+                    
+                    <div class="form-group">
+                        <label for="newRequiredPassword">新密碼（至少6個字元）</label>
+                        <input type="password" id="newRequiredPassword" minlength="6" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmNewPassword">確認新密碼</label>
+                        <input type="password" id="confirmNewPassword" minlength="6" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        確認修改密碼
                     </button>
-                </div>
-                <table class="orders-table">
-                    <thead>
-                        <tr>
-                            <th>訂單編號</th>
-                            <th>下單時間</th>
-                            <th>收件人</th>
-                            <th>金額</th>
-                            <th>狀態</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTableBody">
-                        <tr>
-                            <td colspan="6" style="text-align: center;">載入中...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                </form>
+                
+                <div id="forceChangeMessage" style="margin-top: 15px; text-align: center;"></div>
             </div>
         </div>
-    </div>
+    `;
 
-    <!-- 編輯資料 Modal -->
-    <div id="editProfileModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal('editProfileModal')">&times;</span>
-            <h2>編輯會員資料</h2>
-            <form id="editProfileForm">
-                <div class="form-group">
-                    <label for="editName">姓名</label>
-                    <input type="text" id="editName" required>
-                </div>
-                <div class="form-group">
-                    <label for="editPhone">聯絡電話</label>
-                    <input type="tel" id="editPhone">
-                </div>
-                <div class="form-group">
-                    <label for="editLine">LINE 暱稱</label>
-                    <input type="text" id="editLine">
-                </div>
-                <div class="form-group">
-                    <label for="editAddress">預設地址</label>
-                    <input type="text" id="editAddress">
-                </div>
-                <div class="form-group">
-                    <label for="editIdNumber">身分證字號</label>
-                    <input type="text" id="editIdNumber">
-                </div>
-                <button type="submit" class="btn btn-primary">儲存變更</button>
-            </form>
-        </div>
-    </div>
+        // 插入 Modal 到頁面
+        document.body.insertAdjacentHTML("beforeend", modalHtml);
 
-    <!-- 修改密碼 Modal -->
-    <div id="changePasswordModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close" onclick="closeModal('changePasswordModal')">&times;</span>
-            <h2>修改密碼</h2>
-            <form id="changePasswordForm">
-                <div class="form-group">
-                    <label for="currentPassword">目前密碼</label>
-                    <input type="password" id="currentPassword" required>
-                </div>
-                <div class="form-group">
-                    <label for="newPassword">新密碼 (至少6個字元)</label>
-                    <input type="password" id="newPassword" minlength="6" required>
-                </div>
-                <div class="form-group">
-                    <label for="confirmPassword">確認新密碼</label>
-                    <input type="password" id="confirmPassword" minlength="6" required>
-                </div>
-                <button type="submit" class="btn btn-primary">確認修改</button>
-            </form>
-        </div>
-    </div>
+        // 綁定表單提交事件
+        document
+          .getElementById("forceChangePasswordForm")
+          .addEventListener("submit", async (e) => {
+            e.preventDefault();
 
-    <!-- 快速下單按鈕 -->
-    <a href="/" class="quick-order-btn" title="快速試算下單">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14"/>
-            <path d="M12 5v14"/>
-        </svg>
-    </a>
+            const currentPassword = document.getElementById(
+              "currentDefaultPassword"
+            ).value;
+            const newPassword = document.getElementById(
+              "newRequiredPassword"
+            ).value;
+            const confirmPassword =
+              document.getElementById("confirmNewPassword").value;
+            const messageDiv = document.getElementById("forceChangeMessage");
 
-    <script>
-        const API_BASE = '/api/customers';
-        let currentUser = null;
-        let authToken = localStorage.getItem('customerToken');
-        let autoRefreshInterval = null;
-
-        // 頁面載入時檢查登入狀態
-        window.addEventListener('DOMContentLoaded', () => {
-            if (authToken) {
-                checkAuthStatus();
+            // 驗證
+            if (newPassword !== confirmPassword) {
+              messageDiv.textContent = "新密碼與確認密碼不相符！";
+              messageDiv.style.color = "red";
+              return;
             }
-            
-            // 設定自動更新勾選框
-            const autoRefreshCheckbox = document.getElementById('autoRefresh');
-            if (autoRefreshCheckbox) {
-                // 讀取用戶偏好設定
-                const savedPreference = localStorage.getItem('autoRefreshEnabled');
-                if (savedPreference !== null) {
-                    autoRefreshCheckbox.checked = savedPreference === 'true';
-                }
-                
-                autoRefreshCheckbox.addEventListener('change', (e) => {
-                    localStorage.setItem('autoRefreshEnabled', e.target.checked);
-                    if (e.target.checked) {
-                        startAutoRefresh();
-                    } else {
-                        stopAutoRefresh();
-                    }
-                });
-            }
-        });
 
-        // 檢查登入狀態
-        async function checkAuthStatus() {
+            if (newPassword === "88888888") {
+              messageDiv.textContent = "不能使用預設密碼作為新密碼！";
+              messageDiv.style.color = "red";
+              return;
+            }
+
             try {
-                const response = await fetch(`${API_BASE}/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+              const response = await fetch("/api/customers/change-password", {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ currentPassword, newPassword }),
+              });
 
-                if (response.ok) {
-                    currentUser = await response.json();
-                    showDashboard();
-                } else {
-                    localStorage.removeItem('customerToken');
-                    authToken = null;
-                }
+              const data = await response.json();
+
+              if (response.ok) {
+                messageDiv.textContent = "密碼修改成功！即將進入會員中心...";
+                messageDiv.style.color = "green";
+
+                // 2秒後關閉 Modal 並顯示會員中心
+                setTimeout(() => {
+                  document.getElementById("forcePasswordChangeModal").remove();
+                  showDashboard();
+                }, 2000);
+              } else {
+                messageDiv.textContent = data.error || "修改失敗";
+                messageDiv.style.color = "red";
+              }
             } catch (error) {
-                console.error('檢查登入狀態失敗:', error);
+              messageDiv.textContent = "網路錯誤，請稍後再試";
+              messageDiv.style.color = "red";
             }
-        }
+          });
 
-        // 切換登入/註冊標籤
-        function switchTab(tab) {
-            const tabs = document.querySelectorAll('.tab-btn');
-            const loginForm = document.getElementById('loginForm');
-            const registerForm = document.getElementById('registerForm');
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            
-            if (tab === 'login') {
-                tabs[0].classList.add('active');
-                loginForm.style.display = 'block';
-                registerForm.style.display = 'none';
+        // 防止使用者關閉 Modal
+        window.onbeforeunload = function () {
+          return "您必須先修改密碼才能使用系統";
+        };
+      }
+
+      // 註冊處理
+      document
+        .getElementById("registerForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const formData = {
+            name: document.getElementById("regName").value,
+            email: document.getElementById("regEmail").value,
+            password: document.getElementById("regPassword").value,
+            phone: document.getElementById("regPhone").value,
+            lineNickname: document.getElementById("regLine").value,
+            address: document.getElementById("regAddress").value,
+            idNumber: document.getElementById("regIdNumber").value,
+          };
+
+          try {
+            const response = await fetch(`${API_BASE}/register`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              localStorage.setItem("customerToken", data.token);
+              authToken = data.token;
+              currentUser = data.customer;
+              showMessage("註冊成功！", "success");
+              setTimeout(() => showDashboard(), 1000);
             } else {
-                tabs[1].classList.add('active');
-                loginForm.style.display = 'none';
-                registerForm.style.display = 'block';
+              showMessage(data.error || "註冊失敗", "error");
             }
-            
-            clearMessage();
-        }
-
-        // 登入處理
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            try {
-                const response = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('customerToken', data.token);
-                    authToken = data.token;
-                    currentUser = data.customer;
-                    showMessage('登入成功！', 'success');
-                    setTimeout(() => showDashboard(), 1000);
-                } else {
-                    showMessage(data.error || '登入失敗', 'error');
-                }
-            } catch (error) {
-                showMessage('網路錯誤，請稍後再試', 'error');
-            }
+          } catch (error) {
+            showMessage("網路錯誤，請稍後再試", "error");
+          }
         });
 
-        // 註冊處理
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = {
-                name: document.getElementById('regName').value,
-                email: document.getElementById('regEmail').value,
-                password: document.getElementById('regPassword').value,
-                phone: document.getElementById('regPhone').value,
-                lineNickname: document.getElementById('regLine').value,
-                address: document.getElementById('regAddress').value,
-                idNumber: document.getElementById('regIdNumber').value
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE}/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
+      // 顯示會員儀表板
+      async function showDashboard() {
+        document.getElementById("authSection").classList.remove("active");
+        document.getElementById("dashboard").classList.add("active");
+        document.getElementById("logoutBtn").style.display = "block";
 
-                const data = await response.json();
-                
-                if (response.ok) {
-                    localStorage.setItem('customerToken', data.token);
-                    authToken = data.token;
-                    currentUser = data.customer;
-                    showMessage('註冊成功！', 'success');
-                    setTimeout(() => showDashboard(), 1000);
-                } else {
-                    showMessage(data.error || '註冊失敗', 'error');
-                }
-            } catch (error) {
-                showMessage('網路錯誤，請稍後再試', 'error');
-            }
-        });
-
-        // 顯示會員儀表板
-        async function showDashboard() {
-            document.getElementById('authSection').classList.remove('active');
-            document.getElementById('dashboard').classList.add('active');
-            document.getElementById('logoutBtn').style.display = 'block';
-            
-            // 顯示會員資料
-            document.getElementById('userName').textContent = currentUser.name || '-';
-            document.getElementById('userEmail').textContent = currentUser.email || '-';
-            document.getElementById('userPhone').textContent = currentUser.phone || '-';
-            document.getElementById('userLine').textContent = currentUser.lineNickname || '-';
-            document.getElementById('userAddress').textContent = currentUser.defaultAddress || '-';
-            
-            // 載入訂單列表
-            await loadOrders();
-            
-            // 根據用戶偏好啟動自動更新
-            const autoRefreshCheckbox = document.getElementById('autoRefresh');
-            if (autoRefreshCheckbox && autoRefreshCheckbox.checked) {
-                startAutoRefresh();
-            }
-        }
+        // 顯示會員資料
+        document.getElementById("userName").textContent =
+          currentUser.name || "-";
+        document.getElementById("userEmail").textContent =
+          currentUser.email || "-";
+        document.getElementById("userPhone").textContent =
+          currentUser.phone || "-";
+        document.getElementById("userLine").textContent =
+          currentUser.lineNickname || "-";
+        document.getElementById("userAddress").textContent =
+          currentUser.defaultAddress || "-";
 
         // 載入訂單列表
-        async function loadOrders() {
-            try {
-                const response = await fetch(`${API_BASE}/orders`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+        await loadOrders();
 
-                if (response.ok) {
-                    const orders = await response.json();
-                    displayOrders(orders);
-                    updateLastRefreshTime();
-                }
-            } catch (error) {
-                console.error('載入訂單失敗:', error);
-            }
+        // 根據用戶偏好啟動自動更新
+        const autoRefreshCheckbox = document.getElementById("autoRefresh");
+        if (autoRefreshCheckbox && autoRefreshCheckbox.checked) {
+          startAutoRefresh();
         }
-        
-        // 更新最後更新時間顯示
-        function updateLastRefreshTime() {
-            const lastUpdateElement = document.getElementById('lastUpdateTime');
-            if (lastUpdateElement) {
-                const now = new Date();
-                const timeString = now.toLocaleTimeString('zh-TW', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit' 
-                });
-                lastUpdateElement.textContent = `最後更新: ${timeString}`;
-            }
+      }
+
+      // 載入訂單列表
+      async function loadOrders() {
+        try {
+          const response = await fetch(`${API_BASE}/orders`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+
+          if (response.ok) {
+            const orders = await response.json();
+            displayOrders(orders);
+            updateLastRefreshTime();
+          }
+        } catch (error) {
+          console.error("載入訂單失敗:", error);
         }
-        
-        // 開始自動更新
-        function startAutoRefresh() {
-            // 先停止現有的計時器（如果有）
-            stopAutoRefresh();
-            
-            // 設定新的計時器（每30秒更新一次）
-            autoRefreshInterval = setInterval(() => {
-                // 只在會員儀表板顯示時才更新
-                if (document.getElementById('dashboard').classList.contains('active')) {
-                    console.log('自動更新訂單...');
-                    loadOrders();
-                }
-            }, 30000); // 30秒
-            
-            console.log('已啟動自動更新（每30秒）');
+      }
+
+      // 更新最後更新時間顯示
+      function updateLastRefreshTime() {
+        const lastUpdateElement = document.getElementById("lastUpdateTime");
+        if (lastUpdateElement) {
+          const now = new Date();
+          const timeString = now.toLocaleTimeString("zh-TW", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          });
+          lastUpdateElement.textContent = `最後更新: ${timeString}`;
         }
-        
-        // 停止自動更新
-        function stopAutoRefresh() {
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
-                autoRefreshInterval = null;
-                console.log('已停止自動更新');
-            }
+      }
+
+      // 開始自動更新
+      function startAutoRefresh() {
+        // 先停止現有的計時器（如果有）
+        stopAutoRefresh();
+
+        // 設定新的計時器（每30秒更新一次）
+        autoRefreshInterval = setInterval(() => {
+          // 只在會員儀表板顯示時才更新
+          if (
+            document.getElementById("dashboard").classList.contains("active")
+          ) {
+            console.log("自動更新訂單...");
+            loadOrders();
+          }
+        }, 30000); // 30秒
+
+        console.log("已啟動自動更新（每30秒）");
+      }
+
+      // 停止自動更新
+      function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+          autoRefreshInterval = null;
+          console.log("已停止自動更新");
+        }
+      }
+
+      // 顯示訂單列表
+      function displayOrders(orders) {
+        const tbody = document.getElementById("ordersTableBody");
+
+        if (!tbody) return; // 防止元素不存在
+
+        if (orders.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" style="text-align: center;">尚無訂單記錄</td></tr>';
+          return;
         }
 
-        // 顯示訂單列表
-        function displayOrders(orders) {
-            const tbody = document.getElementById('ordersTableBody');
-            
-            if (!tbody) return; // 防止元素不存在
-            
-            if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">尚無訂單記錄</td></tr>';
-                return;
+        const statusMap = {
+          NEEDS_PURCHASE: "需採購清單",
+          PURCHASED: "已採購",
+          IN_WAREHOUSE: "已入庫",
+          NOT_IN_WAREHOUSE: "未入庫",
+          SHIPPED: "已發貨",
+          IN_CUSTOMS: "清關中",
+          DELIVERY_COMPLETE: "派送完成",
+        };
+
+        // 保存當前顯示的訂單狀態，用於比較變化
+        const currentOrdersMap = {};
+        tbody.querySelectorAll("tr").forEach((row) => {
+          const orderId = row.getAttribute("data-order-id");
+          const status = row.getAttribute("data-order-status");
+          if (orderId) {
+            currentOrdersMap[orderId] = status;
+          }
+        });
+
+        tbody.innerHTML = orders
+          .map((order) => {
+            // 解析 JSON 如果是字串
+            let calculationResult = order.calculationResult;
+            if (typeof calculationResult === "string") {
+              try {
+                calculationResult = JSON.parse(calculationResult);
+              } catch (e) {
+                calculationResult = {};
+              }
             }
-            
-            const statusMap = {
-                NEEDS_PURCHASE: '需採購清單',
-                PURCHASED: '已採購',
-                IN_WAREHOUSE: '已入庫',
-                NOT_IN_WAREHOUSE: '未入庫',
-                SHIPPED: '已發貨',
-                IN_CUSTOMS: '清關中',
-                DELIVERY_COMPLETE: '派送完成'
-            };
-            
-            // 保存當前顯示的訂單狀態，用於比較變化
-            const currentOrdersMap = {};
-            tbody.querySelectorAll('tr').forEach(row => {
-                const orderId = row.getAttribute('data-order-id');
-                const status = row.getAttribute('data-order-status');
-                if (orderId) {
-                    currentOrdersMap[orderId] = status;
-                }
-            });
-            
-            tbody.innerHTML = orders.map(order => {
-                // 解析 JSON 如果是字串
-                let calculationResult = order.calculationResult;
-                if (typeof calculationResult === 'string') {
-                    try {
-                        calculationResult = JSON.parse(calculationResult);
-                    } catch (e) {
-                        calculationResult = {};
-                    }
-                }
-                
-                const statusText = statusMap[order.status] || order.status || '處理中';
-                const finalTotal = calculationResult?.finalTotal || 0;
-                
-                // 檢查狀態是否有更新
-                const hasStatusChanged = currentOrdersMap[order.id] && currentOrdersMap[order.id] !== order.status;
-                const highlightClass = hasStatusChanged ? 'status-updated' : '';
-                
-                return `
-                    <tr data-order-id="${order.id}" data-order-status="${order.status}" class="${highlightClass}">
+
+            const statusText =
+              statusMap[order.status] || order.status || "處理中";
+            const finalTotal = calculationResult?.finalTotal || 0;
+
+            // 檢查狀態是否有更新
+            const hasStatusChanged =
+              currentOrdersMap[order.id] &&
+              currentOrdersMap[order.id] !== order.status;
+            const highlightClass = hasStatusChanged ? "status-updated" : "";
+
+            return `
+                    <tr data-order-id="${order.id}" data-order-status="${
+              order.status
+            }" class="${highlightClass}">
                         <td>${order.id.slice(0, 8)}...</td>
-                        <td>${new Date(order.createdAt).toLocaleDateString('zh-TW')}</td>
+                        <td>${new Date(order.createdAt).toLocaleDateString(
+                          "zh-TW"
+                        )}</td>
                         <td>${order.recipientName}</td>
                         <td>NT$ ${finalTotal.toLocaleString()}</td>
-                        <td><span class="status-badge status-${order.status}">${statusText}</span></td>
-                        <td><button class="btn btn-secondary" onclick="viewOrderDetail('${order.id}')">查看</button></td>
+                        <td><span class="status-badge status-${
+                          order.status
+                        }">${statusText}</span></td>
+                        <td><button class="btn btn-secondary" onclick="viewOrderDetail('${
+                          order.id
+                        }')">查看</button></td>
                     </tr>
                 `;
-            }).join('');
-            
-            // 如果有狀態更新，顯示通知
-            if (Object.keys(currentOrdersMap).length > 0) {
-                orders.forEach(order => {
-                    if (currentOrdersMap[order.id] && currentOrdersMap[order.id] !== order.status) {
-                        showNotification(`訂單 ${order.id.slice(0, 8)}... 狀態已更新為: ${statusMap[order.status]}`);
-                    }
-                });
+          })
+          .join("");
+
+        // 如果有狀態更新，顯示通知
+        if (Object.keys(currentOrdersMap).length > 0) {
+          orders.forEach((order) => {
+            if (
+              currentOrdersMap[order.id] &&
+              currentOrdersMap[order.id] !== order.status
+            ) {
+              showNotification(
+                `訂單 ${order.id.slice(0, 8)}... 狀態已更新為: ${
+                  statusMap[order.status]
+                }`
+              );
             }
+          });
         }
-        
-        // 顯示通知
-        function showNotification(message) {
-            // 建立通知元素
-            const notification = document.createElement('div');
-            notification.style.cssText = `
+      }
+
+      // 顯示通知
+      function showNotification(message) {
+        // 建立通知元素
+        const notification = document.createElement("div");
+        notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
@@ -901,160 +1143,189 @@
                 z-index: 10000;
                 animation: slideIn 0.3s ease-out;
             `;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            // 3秒後自動消失
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
+        notification.textContent = message;
 
-        // 查看訂單詳情
-        async function viewOrderDetail(orderId) {
-            try {
-                const response = await fetch(`${API_BASE}/orders/${orderId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
+        document.body.appendChild(notification);
 
-                if (response.ok) {
-                    const order = await response.json();
-                    
-                    // 解析 JSON 如果是字串
-                    let calculationResult = order.calculationResult;
-                    if (typeof calculationResult === 'string') {
-                        try {
-                            calculationResult = JSON.parse(calculationResult);
-                        } catch (e) {
-                            calculationResult = {};
-                        }
-                    }
-                    
-                    const statusMap = {
-                        NEEDS_PURCHASE: '需採購清單',
-                        PURCHASED: '已採購',
-                        IN_WAREHOUSE: '已入庫',
-                        NOT_IN_WAREHOUSE: '未入庫',
-                        SHIPPED: '已發貨',
-                        IN_CUSTOMS: '清關中',
-                        DELIVERY_COMPLETE: '派送完成'
-                    };
-                    
-                    const statusText = statusMap[order.status] || order.status || '處理中';
-                    const finalTotal = calculationResult?.finalTotal || 0;
-                    
-                    // 建立詳細資訊的 HTML
-                    let detailHtml = `
+        // 3秒後自動消失
+        setTimeout(() => {
+          notification.style.animation = "slideOut 0.3s ease-out";
+          setTimeout(() => notification.remove(), 300);
+        }, 3000);
+      }
+
+      // 查看訂單詳情
+      async function viewOrderDetail(orderId) {
+        try {
+          const response = await fetch(`${API_BASE}/orders/${orderId}`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+
+          if (response.ok) {
+            const order = await response.json();
+
+            // 解析 JSON 如果是字串
+            let calculationResult = order.calculationResult;
+            if (typeof calculationResult === "string") {
+              try {
+                calculationResult = JSON.parse(calculationResult);
+              } catch (e) {
+                calculationResult = {};
+              }
+            }
+
+            const statusMap = {
+              NEEDS_PURCHASE: "需採購清單",
+              PURCHASED: "已採購",
+              IN_WAREHOUSE: "已入庫",
+              NOT_IN_WAREHOUSE: "未入庫",
+              SHIPPED: "已發貨",
+              IN_CUSTOMS: "清關中",
+              DELIVERY_COMPLETE: "派送完成",
+            };
+
+            const statusText =
+              statusMap[order.status] || order.status || "處理中";
+            const finalTotal = calculationResult?.finalTotal || 0;
+
+            // 建立詳細資訊的 HTML
+            let detailHtml = `
                         <div style="max-height: 70vh; overflow-y: auto;">
                             <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳情</h3>
                             
                             <div style="background-color: #e9f5ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
                                 <p><strong>訂單編號:</strong> ${order.id}</p>
-                                <p><strong>下單時間:</strong> ${new Date(order.createdAt).toLocaleString('zh-TW')}</p>
-                                <p><strong>訂單狀態:</strong> <span class="status-badge status-${order.status}">${statusText}</span></p>
+                                <p><strong>下單時間:</strong> ${new Date(
+                                  order.createdAt
+                                ).toLocaleString("zh-TW")}</p>
+                                <p><strong>訂單狀態:</strong> <span class="status-badge status-${
+                                  order.status
+                                }">${statusText}</span></p>
                             </div>
                             
                             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
                                 <h4>收件資訊</h4>
-                                <p><strong>收件人:</strong> ${order.recipientName}</p>
+                                <p><strong>收件人:</strong> ${
+                                  order.recipientName
+                                }</p>
                                 <p><strong>地址:</strong> ${order.address}</p>
                                 <p><strong>電話:</strong> ${order.phone}</p>
-                                ${order.idNumber ? `<p><strong>身分證號:</strong> ${order.idNumber}</p>` : ''}
+                                ${
+                                  order.idNumber
+                                    ? `<p><strong>身分證號:</strong> ${order.idNumber}</p>`
+                                    : ""
+                                }
                             </div>
                             
                             <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
                                 <h4>費用明細</h4>
-                                <p><strong>海運費:</strong> NT$ ${(calculationResult?.finalSeaFreightCost || 0).toLocaleString()}</p>
-                                <p><strong>偏遠地區費:</strong> NT$ ${(calculationResult?.remoteFee || 0).toLocaleString()}</p>
+                                <p><strong>海運費:</strong> NT$ ${(
+                                  calculationResult?.finalSeaFreightCost || 0
+                                ).toLocaleString()}</p>
+                                <p><strong>偏遠地區費:</strong> NT$ ${(
+                                  calculationResult?.remoteFee || 0
+                                ).toLocaleString()}</p>
                                 <p style="font-size: 1.2em; color: #e74c3c;"><strong>總金額:</strong> NT$ ${finalTotal.toLocaleString()}</p>
                             </div>
                             
                             ${getStatusProgress(order.status)}
                         </div>
                     `;
-                    
-                    // 使用更友善的彈窗顯示
-                    showDetailModal(detailHtml);
-                }
-            } catch (error) {
-                console.error('載入訂單詳情失敗:', error);
-                alert('載入訂單詳情失敗，請稍後再試');
-            }
+
+            // 使用更友善的彈窗顯示
+            showDetailModal(detailHtml);
+          }
+        } catch (error) {
+          console.error("載入訂單詳情失敗:", error);
+          alert("載入訂單詳情失敗，請稍後再試");
         }
-        
-        // 顯示訂單進度
-        function getStatusProgress(status) {
-            const statusFlow = [
-                { key: 'NEEDS_PURCHASE', label: '需採購', icon: '📋' },
-                { key: 'PURCHASED', label: '已採購', icon: '✅' },
-                { key: 'IN_WAREHOUSE', label: '已入庫', icon: '📦' },
-                { key: 'SHIPPED', label: '已發貨', icon: '🚢' },
-                { key: 'IN_CUSTOMS', label: '清關中', icon: '🛃' },
-                { key: 'DELIVERY_COMPLETE', label: '派送完成', icon: '🎉' }
-            ];
-            
-            const currentIndex = statusFlow.findIndex(s => s.key === status);
-            
-            let progressHtml = `
+      }
+
+      // 顯示訂單進度
+      function getStatusProgress(status) {
+        const statusFlow = [
+          { key: "NEEDS_PURCHASE", label: "需採購", icon: "📋" },
+          { key: "PURCHASED", label: "已採購", icon: "✅" },
+          { key: "IN_WAREHOUSE", label: "已入庫", icon: "📦" },
+          { key: "SHIPPED", label: "已發貨", icon: "🚢" },
+          { key: "IN_CUSTOMS", label: "清關中", icon: "🛃" },
+          { key: "DELIVERY_COMPLETE", label: "派送完成", icon: "🎉" },
+        ];
+
+        const currentIndex = statusFlow.findIndex((s) => s.key === status);
+
+        let progressHtml = `
                 <div style="background-color: #fffacd; padding: 15px; border-radius: 5px; margin: 15px 0;">
                     <h4>訂單進度</h4>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             `;
-            
-            statusFlow.forEach((step, index) => {
-                const isActive = index <= currentIndex;
-                const isCurrent = index === currentIndex;
-                progressHtml += `
+
+        statusFlow.forEach((step, index) => {
+          const isActive = index <= currentIndex;
+          const isCurrent = index === currentIndex;
+          progressHtml += `
                     <div style="text-align: center; flex: 1;">
                         <div style="
                             width: 40px;
                             height: 40px;
                             border-radius: 50%;
-                            background-color: ${isActive ? '#1a73e8' : '#e0e0e0'};
+                            background-color: ${
+                              isActive ? "#1a73e8" : "#e0e0e0"
+                            };
                             color: white;
                             display: flex;
                             align-items: center;
                             justify-content: center;
                             margin: 0 auto;
                             font-size: 20px;
-                            ${isCurrent ? 'box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.2);' : ''}
+                            ${
+                              isCurrent
+                                ? "box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.2);"
+                                : ""
+                            }
                         ">
                             ${step.icon}
                         </div>
-                        <p style="margin-top: 5px; font-size: 12px; color: ${isActive ? '#1a73e8' : '#999'};">
+                        <p style="margin-top: 5px; font-size: 12px; color: ${
+                          isActive ? "#1a73e8" : "#999"
+                        };">
                             ${step.label}
                         </p>
                     </div>
-                    ${index < statusFlow.length - 1 ? `
-                        <div style="flex: 1; height: 2px; background-color: ${index < currentIndex ? '#1a73e8' : '#e0e0e0'}; margin-top: -20px;"></div>
-                    ` : ''}
+                    ${
+                      index < statusFlow.length - 1
+                        ? `
+                        <div style="flex: 1; height: 2px; background-color: ${
+                          index < currentIndex ? "#1a73e8" : "#e0e0e0"
+                        }; margin-top: -20px;"></div>
+                    `
+                        : ""
+                    }
                 `;
-            });
-            
-            progressHtml += `
+        });
+
+        progressHtml += `
                     </div>
                 </div>
             `;
-            
-            return progressHtml;
+
+        return progressHtml;
+      }
+
+      // 建立詳情彈窗
+      function showDetailModal(content) {
+        // 移除舊的彈窗（如果存在）
+        const oldModal = document.getElementById("orderDetailModal");
+        if (oldModal) {
+          oldModal.remove();
         }
-        
-        // 建立詳情彈窗
-        function showDetailModal(content) {
-            // 移除舊的彈窗（如果存在）
-            const oldModal = document.getElementById('orderDetailModal');
-            if (oldModal) {
-                oldModal.remove();
-            }
-            
-            // 建立新彈窗
-            const modal = document.createElement('div');
-            modal.id = 'orderDetailModal';
-            modal.style.cssText = `
+
+        // 建立新彈窗
+        const modal = document.createElement("div");
+        modal.id = "orderDetailModal";
+        modal.style.cssText = `
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -1066,8 +1337,8 @@
                 justify-content: center;
                 z-index: 9999;
             `;
-            
-            modal.innerHTML = `
+
+        modal.innerHTML = `
                 <div style="
                     background-color: white;
                     padding: 30px;
@@ -1091,134 +1362,143 @@
                     ${content}
                 </div>
             `;
-            
-            document.body.appendChild(modal);
-            
-            // 點擊背景關閉
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.remove();
-                }
+
+        document.body.appendChild(modal);
+
+        // 點擊背景關閉
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) {
+            modal.remove();
+          }
+        });
+      }
+
+      // 開啟編輯資料視窗
+      function openEditProfile() {
+        document.getElementById("editName").value = currentUser.name || "";
+        document.getElementById("editPhone").value = currentUser.phone || "";
+        document.getElementById("editLine").value =
+          currentUser.lineNickname || "";
+        document.getElementById("editAddress").value =
+          currentUser.defaultAddress || "";
+        document.getElementById("editIdNumber").value =
+          currentUser.idNumber || "";
+        document.getElementById("editProfileModal").classList.add("active");
+      }
+
+      // 編輯資料表單提交
+      document
+        .getElementById("editProfileForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const formData = {
+            name: document.getElementById("editName").value,
+            phone: document.getElementById("editPhone").value,
+            lineNickname: document.getElementById("editLine").value,
+            defaultAddress: document.getElementById("editAddress").value,
+            idNumber: document.getElementById("editIdNumber").value,
+          };
+
+          try {
+            const response = await fetch(`${API_BASE}/profile`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify(formData),
             });
-        }
 
-        // 開啟編輯資料視窗
-        function openEditProfile() {
-            document.getElementById('editName').value = currentUser.name || '';
-            document.getElementById('editPhone').value = currentUser.phone || '';
-            document.getElementById('editLine').value = currentUser.lineNickname || '';
-            document.getElementById('editAddress').value = currentUser.defaultAddress || '';
-            document.getElementById('editIdNumber').value = currentUser.idNumber || '';
-            document.getElementById('editProfileModal').classList.add('active');
-        }
-
-        // 編輯資料表單提交
-        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = {
-                name: document.getElementById('editName').value,
-                phone: document.getElementById('editPhone').value,
-                lineNickname: document.getElementById('editLine').value,
-                defaultAddress: document.getElementById('editAddress').value,
-                idNumber: document.getElementById('editIdNumber').value
-            };
-            
-            try {
-                const response = await fetch(`${API_BASE}/profile`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    currentUser = data.customer;
-                    showDashboard();
-                    closeModal('editProfileModal');
-                    alert('資料更新成功！');
-                }
-            } catch (error) {
-                alert('更新失敗，請稍後再試');
+            if (response.ok) {
+              const data = await response.json();
+              currentUser = data.customer;
+              showDashboard();
+              closeModal("editProfileModal");
+              alert("資料更新成功！");
             }
+          } catch (error) {
+            alert("更新失敗，請稍後再試");
+          }
         });
 
-        // 開啟修改密碼視窗
-        function openChangePassword() {
-            document.getElementById('changePasswordModal').classList.add('active');
-        }
+      // 開啟修改密碼視窗
+      function openChangePassword() {
+        document.getElementById("changePasswordModal").classList.add("active");
+      }
 
-        // 修改密碼表單提交
-        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            if (newPassword !== confirmPassword) {
-                alert('新密碼與確認密碼不相符！');
-                return;
-            }
-            
-            try {
-                const response = await fetch(`${API_BASE}/change-password`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ currentPassword, newPassword })
-                });
+      // 修改密碼表單提交
+      document
+        .getElementById("changePasswordForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
 
-                const data = await response.json();
-                
-                if (response.ok) {
-                    closeModal('changePasswordModal');
-                    alert('密碼修改成功！');
-                    document.getElementById('changePasswordForm').reset();
-                } else {
-                    alert(data.error || '修改失敗');
-                }
-            } catch (error) {
-                alert('網路錯誤，請稍後再試');
+          const currentPassword =
+            document.getElementById("currentPassword").value;
+          const newPassword = document.getElementById("newPassword").value;
+          const confirmPassword =
+            document.getElementById("confirmPassword").value;
+
+          if (newPassword !== confirmPassword) {
+            alert("新密碼與確認密碼不相符！");
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_BASE}/change-password`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({ currentPassword, newPassword }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              closeModal("changePasswordModal");
+              alert("密碼修改成功！");
+              document.getElementById("changePasswordForm").reset();
+            } else {
+              alert(data.error || "修改失敗");
             }
+          } catch (error) {
+            alert("網路錯誤，請稍後再試");
+          }
         });
 
-        // 登出
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            if (confirm('確定要登出嗎？')) {
-                // 停止自動更新
-                stopAutoRefresh();
-                
-                localStorage.removeItem('customerToken');
-                authToken = null;
-                currentUser = null;
-                location.reload();
-            }
-        });
+      // 登出
+      document.getElementById("logoutBtn").addEventListener("click", () => {
+        if (confirm("確定要登出嗎？")) {
+          // 停止自動更新
+          stopAutoRefresh();
 
-        // 關閉 Modal
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
+          localStorage.removeItem("customerToken");
+          authToken = null;
+          currentUser = null;
+          location.reload();
         }
+      });
 
-        // 顯示訊息
-        function showMessage(text, type) {
-            const messageBox = document.getElementById('messageBox');
-            messageBox.textContent = text;
-            messageBox.className = `message ${type}`;
-        }
+      // 關閉 Modal
+      function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove("active");
+      }
 
-        // 清除訊息
-        function clearMessage() {
-            const messageBox = document.getElementById('messageBox');
-            messageBox.className = 'message';
-            messageBox.textContent = '';
-        }
+      // 顯示訊息
+      function showMessage(text, type) {
+        const messageBox = document.getElementById("messageBox");
+        messageBox.textContent = text;
+        messageBox.className = `message ${type}`;
+      }
+
+      // 清除訊息
+      function clearMessage() {
+        const messageBox = document.getElementById("messageBox");
+        messageBox.className = "message";
+        messageBox.textContent = "";
+      }
     </script>
-</body>
+  </body>
 </html>
