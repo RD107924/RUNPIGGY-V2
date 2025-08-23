@@ -180,7 +180,11 @@ app.get("/parcel.html", (req, res) => {
     res.redirect("/customer.html");
   }
 });
-
+// 公開包裹預報頁面路由
+app.get("/parcel-public", (req, res) => {
+  const filePath = path.join(__dirname, "public", "parcel-public.html");
+  res.sendFile(filePath);
+});
 // 將所有其他請求導向主計算器頁面
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -207,4 +211,9 @@ app.listen(PORT, "0.0.0.0", () => {
 // 新增公開包裹預報頁面
 app.get("/parcel-public", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "parcel-public.html"));
+});
+
+// 萬用字元路由必須放最後
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
