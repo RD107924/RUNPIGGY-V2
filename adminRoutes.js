@@ -483,8 +483,6 @@ router.put("/orders/:id/assign", async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // === 加值服務報價 API ===
 router.put("/orders/:id/service-quote", async (req, res) => {
   const { id } = req.params;
@@ -607,3 +605,4 @@ router.post("/orders/batch-quote", async (req, res) => {
     res.status(500).json({ error: "批次更新失敗" });
   }
 });
+module.exports = router;

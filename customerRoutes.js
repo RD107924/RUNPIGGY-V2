@@ -362,6 +362,9 @@ router.get("/orders", authenticateCustomer, async (req, res) => {
         phone: true,
         status: true,
         calculationResult: true,
+        additionalServices: true, // ← 加這行
+        serviceQuoted: true, // ← 加這行
+        serviceQuoteAmount: true, // ← 加這行
       },
     });
 

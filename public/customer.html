@@ -255,6 +255,69 @@
         color: white;
       }
 
+      /* === 新增：加值服務相關樣式 === */
+      .service-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        margin-top: 5px;
+        background-color: #ff9800;
+        color: white;
+        border-radius: 3px;
+        font-size: 11px;
+        font-weight: bold;
+      }
+
+      .service-quoted {
+        background-color: #4caf50;
+      }
+
+      .service-pending {
+        background-color: #ff9800;
+      }
+
+      .service-info {
+        background-color: #fff3e0;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        border-left: 4px solid #ff9800;
+      }
+
+      .service-info h4 {
+        color: #ff6f00;
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+
+      .price-breakdown {
+        background-color: #f0f8ff;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+      }
+
+      .price-breakdown h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #1a73e8;
+      }
+
+      .price-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px dashed #ccc;
+      }
+
+      .price-row:last-child {
+        border-bottom: none;
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #2e7d32;
+        padding-top: 12px;
+      }
+      /* === 結束：加值服務相關樣式 === */
+
       .action-buttons {
         display: flex;
         gap: 10px;
@@ -553,14 +616,16 @@
                 <th>訂單編號</th>
                 <th>下單時間</th>
                 <th>收件人</th>
-                <th>金額</th>
+                <th>運費</th>
+                <th>加值服務</th>
+                <th>總金額</th>
                 <th>狀態</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody id="ordersTableBody">
               <tr>
-                <td colspan="6" style="text-align: center">載入中...</td>
+                <td colspan="8" style="text-align: center">載入中...</td>
               </tr>
             </tbody>
           </table>
@@ -654,6 +719,7 @@
       let currentUser = null;
       let authToken = localStorage.getItem("customerToken");
       let autoRefreshInterval = null;
+      let lastOrderStatus = {}; // 新增：記錄訂單狀態變化
 
       // 頁面載入時檢查登入狀態
       window.addEventListener("DOMContentLoaded", () => {
@@ -723,7 +789,76 @@
         clearMessage();
       }
 
-      // 登入處理
+      // === 新增：解析加值服務函式 ===
+      function parseAdditionalServices(servicesJson) {
+        if (!servicesJson) return null;
+        try {
+          return typeof servicesJson === "string"
+            ? JSON.parse(servicesJson)
+            : servicesJson;
+        } catch (e) {
+          console.error("解析加值服務失敗:", e);
+          return null;
+        }
+      }
+
+      // === 新增：格式化加值服務顯示 ===
+      function formatServiceBadge(order) {
+        const services = parseAdditionalServices(order.additionalServices);
+        if (!services) return "-";
+
+        const items = [];
+        if (services.carryUpstairs?.needed) {
+          items.push(`搬運${services.carryUpstairs.floor}樓`);
+        }
+        if (services.assembly?.needed) {
+          items.push("組裝");
+        }
+
+        if (items.length === 0) return "-";
+
+        const badgeClass = order.serviceQuoted
+          ? "service-quoted"
+          : "service-pending";
+        const statusText = order.serviceQuoted
+          ? `已報價 NT$${(order.serviceQuoteAmount || 0).toLocaleString()}`
+          : "待報價";
+
+        return `
+          <span class="service-badge ${badgeClass}">
+            ${items.join("、")}
+          </span>
+          <br>
+          <small style="color: ${
+            order.serviceQuoted ? "green" : "orange"
+          };">${statusText}</small>
+        `;
+      }
+
+      // === 新增：計算總金額 ===
+      function calculateTotalAmount(order) {
+        let calculationResult = order.calculationResult;
+        if (typeof calculationResult === "string") {
+          try {
+            calculationResult = JSON.parse(calculationResult);
+          } catch (e) {
+            calculationResult = {};
+          }
+        }
+
+        const shippingFee = calculationResult?.finalTotal || 0;
+        const serviceFee = order.serviceQuoted
+          ? order.serviceQuoteAmount || 0
+          : 0;
+
+        return {
+          shipping: shippingFee,
+          service: serviceFee,
+          total: shippingFee + serviceFee,
+        };
+      }
+
+      // 登入處理（保持原有）
       document
         .getElementById("loginForm")
         ?.addEventListener("submit", async (e) => {
@@ -773,7 +908,7 @@
           }
         });
 
-      // 新增：顯示強制修改密碼的 Modal
+      // 新增：顯示強制修改密碼的 Modal（保持原有）
       function showForcePasswordChangeModal() {
         // 建立 Modal HTML
         const modalHtml = `
@@ -905,7 +1040,7 @@
         };
       }
 
-      // 註冊處理
+      // 註冊處理（保持原有）
       document
         .getElementById("registerForm")
         .addEventListener("submit", async (e) => {
@@ -946,7 +1081,7 @@
           }
         });
 
-      // 顯示會員儀表板
+      // 顯示會員儀表板（保持原有）
       async function showDashboard() {
         document.getElementById("authSection").classList.remove("active");
         document.getElementById("dashboard").classList.add("active");
@@ -974,7 +1109,7 @@
         }
       }
 
-      // 載入訂單列表
+      // 載入訂單列表（保持原有）
       async function loadOrders() {
         try {
           const response = await fetch(`${API_BASE}/orders`, {
@@ -987,13 +1122,54 @@
             const orders = await response.json();
             displayOrders(orders);
             updateLastRefreshTime();
+            checkOrderChanges(orders); // 新增：檢查變化
           }
         } catch (error) {
           console.error("載入訂單失敗:", error);
         }
       }
 
-      // 更新最後更新時間顯示
+      // === 新增：檢查訂單變化 ===
+      function checkOrderChanges(orders) {
+        orders.forEach((order) => {
+          const previousStatus = lastOrderStatus[order.id];
+          if (previousStatus) {
+            // 檢查狀態變化
+            if (previousStatus.status !== order.status) {
+              const statusMap = {
+                NEEDS_PURCHASE: "需採購清單",
+                PURCHASED: "已採購",
+                IN_WAREHOUSE: "已入庫",
+                NOT_IN_WAREHOUSE: "未入庫",
+                SHIPPED: "已發貨",
+                IN_CUSTOMS: "清關中",
+                DELIVERY_COMPLETE: "派送完成",
+              };
+              showNotification(
+                `訂單 ${order.id.slice(0, 8)}... 狀態已更新為: ${
+                  statusMap[order.status]
+                }`
+              );
+            }
+            // 檢查報價變化
+            if (!previousStatus.serviceQuoted && order.serviceQuoted) {
+              showNotification(
+                `訂單 ${order.id.slice(0, 8)}... 加值服務已報價：NT$ ${
+                  order.serviceQuoteAmount
+                }`
+              );
+            }
+          }
+          // 更新記錄
+          lastOrderStatus[order.id] = {
+            status: order.status,
+            serviceQuoted: order.serviceQuoted,
+            serviceQuoteAmount: order.serviceQuoteAmount,
+          };
+        });
+      }
+
+      // 更新最後更新時間顯示（保持原有）
       function updateLastRefreshTime() {
         const lastUpdateElement = document.getElementById("lastUpdateTime");
         if (lastUpdateElement) {
@@ -1007,7 +1183,7 @@
         }
       }
 
-      // 開始自動更新
+      // 開始自動更新（保持原有）
       function startAutoRefresh() {
         // 先停止現有的計時器（如果有）
         stopAutoRefresh();
@@ -1026,7 +1202,7 @@
         console.log("已啟動自動更新（每30秒）");
       }
 
-      // 停止自動更新
+      // 停止自動更新（保持原有）
       function stopAutoRefresh() {
         if (autoRefreshInterval) {
           clearInterval(autoRefreshInterval);
@@ -1035,7 +1211,7 @@
         }
       }
 
-      // 顯示訂單列表
+      // === 修改：顯示訂單列表（加入加值服務欄位）===
       function displayOrders(orders) {
         const tbody = document.getElementById("ordersTableBody");
 
@@ -1043,7 +1219,7 @@
 
         if (orders.length === 0) {
           tbody.innerHTML =
-            '<tr><td colspan="6" style="text-align: center;">尚無訂單記錄</td></tr>';
+            '<tr><td colspan="8" style="text-align: center;">尚無訂單記錄</td></tr>';
           return;
         }
 
@@ -1069,19 +1245,10 @@
 
         tbody.innerHTML = orders
           .map((order) => {
-            // 解析 JSON 如果是字串
-            let calculationResult = order.calculationResult;
-            if (typeof calculationResult === "string") {
-              try {
-                calculationResult = JSON.parse(calculationResult);
-              } catch (e) {
-                calculationResult = {};
-              }
-            }
-
             const statusText =
               statusMap[order.status] || order.status || "處理中";
-            const finalTotal = calculationResult?.finalTotal || 0;
+            const amounts = calculateTotalAmount(order);
+            const serviceBadge = formatServiceBadge(order);
 
             // 檢查狀態是否有更新
             const hasStatusChanged =
@@ -1090,44 +1257,39 @@
             const highlightClass = hasStatusChanged ? "status-updated" : "";
 
             return `
-                    <tr data-order-id="${order.id}" data-order-status="${
+              <tr data-order-id="${order.id}" data-order-status="${
               order.status
             }" class="${highlightClass}">
-                        <td>${order.id.slice(0, 8)}...</td>
-                        <td>${new Date(order.createdAt).toLocaleDateString(
-                          "zh-TW"
-                        )}</td>
-                        <td>${order.recipientName}</td>
-                        <td>NT$ ${finalTotal.toLocaleString()}</td>
-                        <td><span class="status-badge status-${
-                          order.status
-                        }">${statusText}</span></td>
-                        <td><button class="btn btn-secondary" onclick="viewOrderDetail('${
-                          order.id
-                        }')">查看</button></td>
-                    </tr>
-                `;
+                <td>${order.id.slice(0, 8)}...</td>
+                <td>${new Date(order.createdAt).toLocaleDateString(
+                  "zh-TW"
+                )}</td>
+                <td>${order.recipientName}</td>
+                <td>NT$ ${amounts.shipping.toLocaleString()}</td>
+                <td>${serviceBadge}</td>
+                <td>
+                  <strong>NT$ ${amounts.total.toLocaleString()}</strong>
+                  ${
+                    amounts.service > 0
+                      ? `<br><small style="color: #666;">(含服務費)</small>`
+                      : ""
+                  }
+                </td>
+                <td><span class="status-badge status-${
+                  order.status
+                }">${statusText}</span></td>
+                <td><button class="btn btn-secondary" onclick="viewOrderDetail('${
+                  order.id
+                }')">查看</button></td>
+              </tr>
+            `;
           })
           .join("");
 
-        // 如果有狀態更新，顯示通知
-        if (Object.keys(currentOrdersMap).length > 0) {
-          orders.forEach((order) => {
-            if (
-              currentOrdersMap[order.id] &&
-              currentOrdersMap[order.id] !== order.status
-            ) {
-              showNotification(
-                `訂單 ${order.id.slice(0, 8)}... 狀態已更新為: ${
-                  statusMap[order.status]
-                }`
-              );
-            }
-          });
-        }
+        // 如果有狀態更新，顯示通知（已移到 checkOrderChanges）
       }
 
-      // 顯示通知
+      // 顯示通知（保持原有）
       function showNotification(message) {
         // 建立通知元素
         const notification = document.createElement("div");
@@ -1154,7 +1316,7 @@
         }, 3000);
       }
 
-      // 查看訂單詳情
+      // === 修改：查看訂單詳情（加入加值服務資訊）===
       async function viewOrderDetail(orderId) {
         try {
           const response = await fetch(`${API_BASE}/orders/${orderId}`, {
@@ -1176,6 +1338,7 @@
               }
             }
 
+            const services = parseAdditionalServices(order.additionalServices);
             const statusMap = {
               NEEDS_PURCHASE: "需採購清單",
               PURCHASED: "已採購",
@@ -1188,51 +1351,116 @@
 
             const statusText =
               statusMap[order.status] || order.status || "處理中";
-            const finalTotal = calculationResult?.finalTotal || 0;
+            const amounts = calculateTotalAmount(order);
 
             // 建立詳細資訊的 HTML
             let detailHtml = `
-                        <div style="max-height: 70vh; overflow-y: auto;">
-                            <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳情</h3>
-                            
-                            <div style="background-color: #e9f5ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                                <p><strong>訂單編號:</strong> ${order.id}</p>
-                                <p><strong>下單時間:</strong> ${new Date(
-                                  order.createdAt
-                                ).toLocaleString("zh-TW")}</p>
-                                <p><strong>訂單狀態:</strong> <span class="status-badge status-${
-                                  order.status
-                                }">${statusText}</span></p>
-                            </div>
-                            
-                            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                                <h4>收件資訊</h4>
-                                <p><strong>收件人:</strong> ${
-                                  order.recipientName
-                                }</p>
-                                <p><strong>地址:</strong> ${order.address}</p>
-                                <p><strong>電話:</strong> ${order.phone}</p>
-                                ${
-                                  order.idNumber
-                                    ? `<p><strong>身分證號:</strong> ${order.idNumber}</p>`
-                                    : ""
-                                }
-                            </div>
-                            
-                            <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                                <h4>費用明細</h4>
-                                <p><strong>海運費:</strong> NT$ ${(
-                                  calculationResult?.finalSeaFreightCost || 0
-                                ).toLocaleString()}</p>
-                                <p><strong>偏遠地區費:</strong> NT$ ${(
-                                  calculationResult?.remoteFee || 0
-                                ).toLocaleString()}</p>
-                                <p style="font-size: 1.2em; color: #e74c3c;"><strong>總金額:</strong> NT$ ${finalTotal.toLocaleString()}</p>
-                            </div>
-                            
-                            ${getStatusProgress(order.status)}
-                        </div>
-                    `;
+              <div style="max-height: 70vh; overflow-y: auto;">
+                <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳情</h3>
+                
+                <div style="background-color: #e9f5ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                  <p><strong>訂單編號:</strong> ${order.id}</p>
+                  <p><strong>下單時間:</strong> ${new Date(
+                    order.createdAt
+                  ).toLocaleString("zh-TW")}</p>
+                  <p><strong>訂單狀態:</strong> <span class="status-badge status-${
+                    order.status
+                  }">${statusText}</span></p>
+                </div>
+                
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                  <h4>收件資訊</h4>
+                  <p><strong>收件人:</strong> ${order.recipientName}</p>
+                  <p><strong>地址:</strong> ${order.address}</p>
+                  <p><strong>電話:</strong> ${order.phone}</p>
+                  ${
+                    order.idNumber
+                      ? `<p><strong>身分證號:</strong> ${order.idNumber}</p>`
+                      : ""
+                  }
+                </div>
+            `;
+
+            // 加值服務資訊
+            if (
+              services &&
+              (services.carryUpstairs?.needed || services.assembly?.needed)
+            ) {
+              detailHtml += `
+                <div class="service-info">
+                  <h4>加值服務</h4>
+              `;
+
+              if (services.carryUpstairs?.needed) {
+                detailHtml += `
+                  <p><strong>搬運上樓：</strong> ${
+                    services.carryUpstairs.floor
+                  }樓 (${
+                  services.carryUpstairs.hasElevator === "yes" ? "有" : "無"
+                }電梯)</p>
+                `;
+              }
+
+              if (services.assembly?.needed) {
+                detailHtml += `
+                  <p><strong>組裝服務：</strong> ${
+                    services.assembly.items || "需要組裝"
+                  }</p>
+                `;
+              }
+
+              if (order.serviceQuoted) {
+                detailHtml += `
+                  <p style="color: green; font-weight: bold;">
+                    ✅ 服務費用已報價：NT$ ${order.serviceQuoteAmount.toLocaleString()}
+                  </p>
+                `;
+              } else {
+                detailHtml += `
+                  <p style="color: orange;">⏳ 服務費用報價中，客服將盡快與您聯繫</p>
+                `;
+              }
+
+              detailHtml += `</div>`;
+            }
+
+            // 費用明細
+            detailHtml += `
+              <div class="price-breakdown">
+                <h4>費用明細</h4>
+                <div class="price-row">
+                  <span>海運費：</span>
+                  <span>NT$ ${(
+                    calculationResult?.finalSeaFreightCost || 0
+                  ).toLocaleString()}</span>
+                </div>
+                <div class="price-row">
+                  <span>偏遠地區費：</span>
+                  <span>NT$ ${(
+                    calculationResult?.remoteFee || 0
+                  ).toLocaleString()}</span>
+                </div>
+            `;
+
+            if (order.serviceQuoted && order.serviceQuoteAmount > 0) {
+              detailHtml += `
+                <div class="price-row">
+                  <span>加值服務費：</span>
+                  <span>NT$ ${order.serviceQuoteAmount.toLocaleString()}</span>
+                </div>
+              `;
+            }
+
+            detailHtml += `
+                <div class="price-row">
+                  <span><strong>總金額：</strong></span>
+                  <span><strong>NT$ ${amounts.total.toLocaleString()}</strong></span>
+                </div>
+              </div>
+            `;
+
+            detailHtml += getStatusProgress(order.status);
+            detailHtml += `</div>`;
 
             // 使用更友善的彈窗顯示
             showDetailModal(detailHtml);
@@ -1243,7 +1471,7 @@
         }
       }
 
-      // 顯示訂單進度
+      // 顯示訂單進度（保持原有）
       function getStatusProgress(status) {
         const statusFlow = [
           { key: "NEEDS_PURCHASE", label: "需採購", icon: "📋" },
@@ -1314,7 +1542,7 @@
         return progressHtml;
       }
 
-      // 建立詳情彈窗
+      // 建立詳情彈窗（保持原有）
       function showDetailModal(content) {
         // 移除舊的彈窗（如果存在）
         const oldModal = document.getElementById("orderDetailModal");
@@ -1373,7 +1601,10 @@
         });
       }
 
-      // 開啟編輯資料視窗
+      // 以下函式保持原有不變...
+      // openEditProfile, editProfileForm, openChangePassword, changePasswordForm, logoutBtn, closeModal, showMessage, clearMessage
+
+      // 開啟編輯資料視窗（保持原有）
       function openEditProfile() {
         document.getElementById("editName").value = currentUser.name || "";
         document.getElementById("editPhone").value = currentUser.phone || "";
@@ -1386,7 +1617,7 @@
         document.getElementById("editProfileModal").classList.add("active");
       }
 
-      // 編輯資料表單提交
+      // 編輯資料表單提交（保持原有）
       document
         .getElementById("editProfileForm")
         .addEventListener("submit", async (e) => {
@@ -1422,12 +1653,12 @@
           }
         });
 
-      // 開啟修改密碼視窗
+      // 開啟修改密碼視窗（保持原有）
       function openChangePassword() {
         document.getElementById("changePasswordModal").classList.add("active");
       }
 
-      // 修改密碼表單提交
+      // 修改密碼表單提交（保持原有）
       document
         .getElementById("changePasswordForm")
         .addEventListener("submit", async (e) => {
@@ -1468,7 +1699,7 @@
           }
         });
 
-      // 登出
+      // 登出（保持原有）
       document.getElementById("logoutBtn").addEventListener("click", () => {
         if (confirm("確定要登出嗎？")) {
           // 停止自動更新
@@ -1481,19 +1712,19 @@
         }
       });
 
-      // 關閉 Modal
+      // 關閉 Modal（保持原有）
       function closeModal(modalId) {
         document.getElementById(modalId).classList.remove("active");
       }
 
-      // 顯示訊息
+      // 顯示訊息（保持原有）
       function showMessage(text, type) {
         const messageBox = document.getElementById("messageBox");
         messageBox.textContent = text;
         messageBox.className = `message ${type}`;
       }
 
-      // 清除訊息
+      // 清除訊息（保持原有）
       function clearMessage() {
         const messageBox = document.getElementById("messageBox");
         messageBox.className = "message";
