@@ -484,3 +484,126 @@ router.put("/orders/:id/assign", async (req, res) => {
 });
 
 module.exports = router;
+
+// === 加值服務報價 API ===
+router.put("/orders/:id/service-quote", async (req, res) => {
+  const { id } = req.params;
+  const { serviceQuoteAmount, serviceQuoted } = req.body;
+
+  try {
+    // 先檢查訂單是否存在且有加值服務
+    const order = await prisma.shipmentOrder.findUnique({
+      where: { id },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "找不到此訂單" });
+    }
+
+    // 檢查是否有加值服務需求
+    if (!order.additionalServices) {
+      return res.status(400).json({ error: "此訂單無加值服務需求" });
+    }
+
+    // 更新報價
+    const updatedOrder = await prisma.shipmentOrder.update({
+      where: { id },
+      data: {
+        serviceQuoteAmount: parseFloat(serviceQuoteAmount) || 0,
+        serviceQuoted: serviceQuoted === true,
+      },
+    });
+
+    res.json({
+      message: "報價成功",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("更新服務報價失敗:", error);
+    res.status(500).json({ error: "更新報價失敗" });
+  }
+});
+
+// 取得所有待報價的訂單
+router.get("/orders/pending-quotes", async (req, res) => {
+  try {
+    const orders = await prisma.shipmentOrder.findMany({
+      where: {
+        additionalServices: { not: null },
+        serviceQuoted: false,
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        customer: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    // 解析 JSON 並過濾真正需要服務的訂單
+    const filteredOrders = orders.filter((order) => {
+      try {
+        const services =
+          typeof order.additionalServices === "string"
+            ? JSON.parse(order.additionalServices)
+            : order.additionalServices;
+        return (
+          services &&
+          (services.carryUpstairs?.needed || services.assembly?.needed)
+        );
+      } catch (e) {
+        return false;
+      }
+    });
+
+    res.json(filteredOrders);
+  } catch (error) {
+    console.error("查詢待報價訂單失敗:", error);
+    res.status(500).json({ error: "查詢失敗" });
+  }
+});
+
+// 批次更新服務報價
+router.post("/orders/batch-quote", async (req, res) => {
+  const { orderQuotes } = req.body;
+  // orderQuotes 格式: [{ orderId: 'xxx', amount: 1000 }, ...]
+
+  if (!Array.isArray(orderQuotes)) {
+    return res.status(400).json({ error: "請提供有效的報價資料" });
+  }
+
+  try {
+    const results = await Promise.all(
+      orderQuotes.map(async ({ orderId, amount }) => {
+        try {
+          return await prisma.shipmentOrder.update({
+            where: { id: orderId },
+            data: {
+              serviceQuoteAmount: parseFloat(amount) || 0,
+              serviceQuoted: true,
+            },
+          });
+        } catch (e) {
+          console.error(`更新訂單 ${orderId} 失敗:`, e);
+          return null;
+        }
+      })
+    );
+
+    const successCount = results.filter((r) => r !== null).length;
+
+    res.json({
+      message: `批次報價完成，成功 ${successCount} 筆，失敗 ${
+        orderQuotes.length - successCount
+      } 筆`,
+      results: results.filter((r) => r !== null),
+    });
+  } catch (error) {
+    console.error("批次更新報價失敗:", error);
+    res.status(500).json({ error: "批次更新失敗" });
+  }
+});

@@ -5,6 +5,104 @@
     <title>訂單管理後台</title>
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="stylesheet" href="style.css" />
+    <style>
+      /* 新增加值服務相關樣式 */
+      .service-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        margin-left: 5px;
+        background-color: #ff9800;
+        color: white;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .service-details {
+        background-color: #fff3e0;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 15px 0;
+        border-left: 4px solid #ff9800;
+      }
+
+      .service-details h4 {
+        color: #ff6f00;
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+
+      .service-item {
+        padding: 8px 0;
+        border-bottom: 1px dashed #ffcc80;
+      }
+
+      .service-item:last-child {
+        border-bottom: none;
+      }
+
+      .quote-section {
+        background-color: #e3f2fd;
+        padding: 15px;
+        border-radius: 5px;
+        margin-top: 15px;
+      }
+
+      .quote-input {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+      }
+
+      .quote-input input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #2196f3;
+        border-radius: 4px;
+      }
+
+      .btn-quote {
+        background-color: #2196f3;
+        color: white;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .btn-quote:hover {
+        background-color: #1976d2;
+      }
+
+      .quoted-badge {
+        background-color: #4caf50;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-size: 12px;
+        display: inline-block;
+      }
+
+      .filter-services {
+        display: inline-block;
+        margin-left: 10px;
+      }
+
+      .filter-services label {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background-color: #f5f5f5;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .filter-services input[type="checkbox"] {
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <div class="calculator-container" style="max-width: 1200px">
@@ -51,8 +149,8 @@
           <p id="stats-month">0</p>
         </div>
         <div class="stat-card">
-          <h4>員工人數</h4>
-          <p id="stats-users">0</p>
+          <h4>待報價服務</h4>
+          <p id="stats-services">0</p>
         </div>
       </div>
 
@@ -68,6 +166,12 @@
           id="search-input"
           placeholder="搜尋姓名/電話/暱稱..."
         />
+        <div class="filter-services">
+          <label>
+            <input type="checkbox" id="filter-has-services" />
+            <span>只顯示有加值服務</span>
+          </label>
+        </div>
       </div>
 
       <div class="admin-table-wrapper" style="overflow-x: auto">
@@ -79,6 +183,7 @@
               <th>收件人</th>
               <th>聯絡電話</th>
               <th>總金額</th>
+              <th>加值服務</th>
               <th>進度</th>
               <th>負責人</th>
             </tr>

@@ -1,4 +1,4 @@
-// public/admin.js (修正訂單詳情顯示)
+// public/admin-enhanced.js - 增強版管理後台（含加值服務管理）
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("authToken");
   if (!token) {
@@ -18,11 +18,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const filterStatus = document.getElementById("filter-status");
   const filterUser = document.getElementById("filter-user");
   const searchInput = document.getElementById("search-input");
+  const filterHasServices = document.getElementById("filter-has-services");
   const modal = document.getElementById("order-detail-modal");
   const modalBody = document.getElementById("modal-body");
   const closeModalBtn = document.querySelector(".modal-close-btn");
 
   let allOrders = [];
+  let allUsers = [];
 
   const statusMap = {
     NEEDS_PURCHASE: "需採購清單",
@@ -34,6 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     DELIVERY_COMPLETE: "派送完成",
   };
 
+  // 初始化狀態選項
   Object.entries(statusMap).forEach(([key, value]) => {
     const option = document.createElement("option");
     option.value = key;
@@ -41,6 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterStatus.appendChild(option);
   });
 
+  // 事件監聽器
   logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("authToken");
     window.location.href = "/login.html";
@@ -51,10 +55,52 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === modal) modal.style.display = "none";
   });
 
+  // 解析加值服務資訊
+  const parseAdditionalServices = (servicesJson) => {
+    if (!servicesJson) return null;
+    try {
+      return typeof servicesJson === "string"
+        ? JSON.parse(servicesJson)
+        : servicesJson;
+    } catch (e) {
+      console.error("解析加值服務失敗:", e);
+      return null;
+    }
+  };
+
+  // 格式化加值服務顯示
+  const formatServiceDisplay = (services) => {
+    if (!services) return "";
+
+    const items = [];
+    if (services.carryUpstairs?.needed) {
+      items.push(`搬運${services.carryUpstairs.floor}樓`);
+    }
+    if (services.assembly?.needed) {
+      items.push("組裝");
+    }
+
+    return items.length > 0
+      ? `<span class="service-badge">${items.join("、")}</span>`
+      : "-";
+  };
+
+  // 渲染訂單列表
   const renderOrders = (orders, users) => {
-    ordersTableBody.innerHTML = orders
+    // 過濾加值服務
+    let filteredOrders = orders;
+    if (filterHasServices.checked) {
+      filteredOrders = orders.filter((order) => {
+        const services = parseAdditionalServices(order.additionalServices);
+        return (
+          services &&
+          (services.carryUpstairs?.needed || services.assembly?.needed)
+        );
+      });
+    }
+
+    ordersTableBody.innerHTML = filteredOrders
       .map((order) => {
-        // 解析 JSON 字串（如果需要）
         let calculationResult = order.calculationResult;
         if (typeof calculationResult === "string") {
           try {
@@ -65,11 +111,26 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         }
 
+        const services = parseAdditionalServices(order.additionalServices);
+        const hasServices =
+          services &&
+          (services.carryUpstairs?.needed || services.assembly?.needed);
+        const serviceDisplay = formatServiceDisplay(services);
+
+        // 檢查是否已報價
+        const quotedDisplay = order.serviceQuoted
+          ? `<span class="quoted-badge">已報價: NT$ ${
+              order.serviceQuoteAmount?.toLocaleString() || 0
+            }</span>`
+          : "";
+
         return `
-            <tr>
-                <td data-label="操作"><button class="btn-view-detail" data-order-id="${
-                  order.id
-                }">查看</button></td>
+            <tr ${hasServices ? 'style="background-color: #fffbf0;"' : ""}>
+                <td data-label="操作">
+                    <button class="btn-view-detail" data-order-id="${
+                      order.id
+                    }">查看</button>
+                </td>
                 <td data-label="訂單時間">${new Date(order.createdAt)
                   .toLocaleString("sv")
                   .replace(" ", "<br>")}</td>
@@ -78,6 +139,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td data-label="總金額">${
                   calculationResult?.finalTotal?.toLocaleString() || "N/A"
                 } 台幣</td>
+                <td data-label="加值服務">
+                    ${serviceDisplay}
+                    ${quotedDisplay}
+                </td>
                 <td data-label="進度">
                     <select class="status-select" data-order-id="${order.id}">
                         ${Object.entries(statusMap)
@@ -109,72 +174,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       .join("");
   };
 
-  const fetchAndRender = async () => {
-    try {
-      const params = new URLSearchParams({
-        status: filterStatus.value,
-        assignedToId: filterUser.value,
-        search: searchInput.value,
-      }).toString();
-
-      const [usersResponse, ordersResponse, statsResponse] = await Promise.all([
-        fetch("/api/admin/users", fetchOptions),
-        fetch(`/api/admin/orders?${params}`, fetchOptions),
-        fetch("/api/admin/stats", fetchOptions),
-      ]);
-
-      if (ordersResponse.status === 401) {
-        localStorage.removeItem("authToken");
-        window.location.href = "/login.html";
-        return;
-      }
-
-      const users = await usersResponse.json();
-      const orders = await ordersResponse.json();
-      const stats = await statsResponse.json();
-
-      // 解析每個訂單的 calculationResult（如果是字串）
-      allOrders = orders.map((order) => {
-        if (typeof order.calculationResult === "string") {
-          try {
-            order.calculationResult = JSON.parse(order.calculationResult);
-          } catch (e) {
-            console.error("解析訂單 JSON 失敗:", e);
-            order.calculationResult = {};
-          }
-        }
-        return order;
-      });
-
-      if (filterUser.options.length <= 1) {
-        users.forEach((user) => {
-          const option = document.createElement("option");
-          option.value = user.id;
-          option.textContent = user.username;
-          filterUser.appendChild(option);
-        });
-      }
-
-      document.getElementById("stats-today").textContent =
-        stats.newOrdersToday || 0;
-      document.getElementById("stats-pending").textContent =
-        stats.pendingOrders || 0;
-      document.getElementById("stats-month").textContent =
-        stats.totalOrdersThisMonth || 0;
-      document.getElementById("stats-users").textContent = stats.userCount || 0;
-
-      renderOrders(allOrders, users);
-    } catch (error) {
-      console.error("載入後台資料失敗:", error);
-      alert("無法載入後台資料，請重新登入或聯繫管理員。");
-    }
-  };
-
+  // 顯示訂單詳情（含加值服務）
   const showOrderDetail = (orderId) => {
     const order = allOrders.find((o) => o.id === orderId);
     if (!order) return;
 
-    // 確保 calculationResult 是物件
     let calculationResult = order.calculationResult;
     if (typeof calculationResult === "string") {
       try {
@@ -184,6 +188,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         calculationResult = {};
       }
     }
+
+    const services = parseAdditionalServices(order.additionalServices);
 
     // 產生商品列表 HTML
     let itemsHtml = "";
@@ -223,6 +229,86 @@ document.addEventListener("DOMContentLoaded", async () => {
       itemsHtml = '<p style="color: #999;">無商品資料</p>';
     }
 
+    // 產生加值服務 HTML
+    let servicesHtml = "";
+    if (
+      services &&
+      (services.carryUpstairs?.needed || services.assembly?.needed)
+    ) {
+      servicesHtml = `
+        <div class="service-details">
+          <h4>📦 加值服務需求</h4>
+          ${
+            services.carryUpstairs?.needed
+              ? `
+            <div class="service-item">
+              <strong>搬運上樓服務：</strong>
+              <ul style="margin: 5px 0 0 20px;">
+                <li>樓層：${services.carryUpstairs.floor} 樓</li>
+                <li>電梯：${
+                  services.carryUpstairs.hasElevator === "yes"
+                    ? "有電梯"
+                    : "無電梯"
+                }</li>
+              </ul>
+            </div>
+          `
+              : ""
+          }
+          ${
+            services.assembly?.needed
+              ? `
+            <div class="service-item">
+              <strong>組裝服務：</strong>
+              <p style="margin: 5px 0 0 20px;">${
+                services.assembly.items || "未說明"
+              }</p>
+            </div>
+          `
+              : ""
+          }
+          
+          <div class="quote-section">
+            <h5>加值服務報價</h5>
+            ${
+              order.serviceQuoted
+                ? `
+              <p style="color: green;">
+                ✅ 已報價：NT$ ${
+                  order.serviceQuoteAmount?.toLocaleString() || 0
+                }
+              </p>
+              <div class="quote-input">
+                <input type="number" id="update-quote-${orderId}" 
+                       value="${order.serviceQuoteAmount || 0}" 
+                       placeholder="修改報價金額">
+                <button class="btn-quote" onclick="updateServiceQuote('${orderId}')">
+                  更新報價
+                </button>
+              </div>
+            `
+                : `
+              <p style="color: orange;">⚠️ 尚未報價</p>
+              <div class="quote-input">
+                <input type="number" id="service-quote-${orderId}" 
+                       placeholder="輸入報價金額 (台幣)">
+                <button class="btn-quote" onclick="submitServiceQuote('${orderId}')">
+                  提交報價
+                </button>
+              </div>
+            `
+            }
+          </div>
+        </div>
+      `;
+    } else {
+      servicesHtml = `
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
+          <p style="color: #666; text-align: center;">此訂單無加值服務需求</p>
+        </div>
+      `;
+    }
+
     // 顯示詳細資訊
     modalBody.innerHTML = `
             <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳細資訊</h3>
@@ -245,6 +331,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
             </div>
             
+            ${servicesHtml}
+            
             <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 15px 0;">
                 <h4 style="color: #1a73e8; margin-top: 0;">費用詳情</h4>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -261,23 +349,46 @@ document.addEventListener("DOMContentLoaded", async () => {
                         ).toLocaleString()} 台幣</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>偏遠地區費率:</strong></td>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${
-                          calculationResult?.remoteAreaRate || 0
-                        } 元/方</td>
-                    </tr>
-                    <tr>
                         <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>偏遠地區費:</strong></td>
                         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${(
                           calculationResult?.remoteFee || 0
                         ).toLocaleString()} 台幣</td>
                     </tr>
-                    <tr style="background-color: #fffacd;">
-                        <td style="padding: 12px; font-size: 1.2em;"><strong>總金額:</strong></td>
-                        <td style="padding: 12px; text-align: right; font-size: 1.2em; color: #e74c3c;"><strong>${(
-                          calculationResult?.finalTotal || 0
-                        ).toLocaleString()} 台幣</strong></td>
+                    ${
+                      order.serviceQuoted
+                        ? `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>加值服務費:</strong></td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${(
+                          order.serviceQuoteAmount || 0
+                        ).toLocaleString()} 台幣</td>
                     </tr>
+                    `
+                        : ""
+                    }
+                    <tr style="background-color: #fffacd;">
+                        <td style="padding: 12px; font-size: 1.2em;"><strong>運費總計:</strong></td>
+                        <td style="padding: 12px; text-align: right; font-size: 1.2em; color: #e74c3c;">
+                            <strong>${(
+                              calculationResult?.finalTotal || 0
+                            ).toLocaleString()} 台幣</strong>
+                        </td>
+                    </tr>
+                    ${
+                      order.serviceQuoted
+                        ? `
+                    <tr style="background-color: #e8f5e9;">
+                        <td style="padding: 12px; font-size: 1.3em;"><strong>含加值服務總計:</strong></td>
+                        <td style="padding: 12px; text-align: right; font-size: 1.3em; color: #2e7d32;">
+                            <strong>${(
+                              (calculationResult?.finalTotal || 0) +
+                              (order.serviceQuoteAmount || 0)
+                            ).toLocaleString()} 台幣</strong>
+                        </td>
+                    </tr>
+                    `
+                        : ""
+                    }
                 </table>
             </div>
             
@@ -285,31 +396,158 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <h4 style="color: #1a73e8; margin-top: 0;">商品列表</h4>
                 ${itemsHtml}
             </div>
-            
-            <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                <h4 style="color: #856404; margin-top: 0;">其他資訊</h4>
-                <p><strong>總材積:</strong> ${(
-                  calculationResult?.totalShipmentVolume || 0
-                ).toLocaleString()} 材</p>
-                <p><strong>總立方米:</strong> ${(
-                  calculationResult?.totalCbm || 0
-                ).toFixed(2)} 方</p>
-                <p><strong>是否有超大件:</strong> ${
-                  calculationResult?.hasOversizedItem ? "是" : "否"
-                }</p>
-                <p><strong>訂單狀態:</strong> <span style="padding: 5px 10px; background-color: #1a73e8; color: white; border-radius: 3px;">${
-                  statusMap[order.status] || order.status
-                }</span></p>
-            </div>
         `;
     modal.style.display = "flex";
   };
 
-  // Event Listeners
-  filterStatus.addEventListener("change", fetchAndRender);
-  filterUser.addEventListener("change", fetchAndRender);
-  searchInput.addEventListener("input", fetchAndRender);
+  // 提交加值服務報價
+  window.submitServiceQuote = async (orderId) => {
+    const quoteInput = document.getElementById(`service-quote-${orderId}`);
+    const amount = parseFloat(quoteInput.value);
 
+    if (isNaN(amount) || amount <= 0) {
+      alert("請輸入有效的報價金額");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${orderId}/service-quote`,
+        {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({
+            serviceQuoteAmount: amount,
+            serviceQuoted: true,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        alert("報價成功！");
+        await fetchAndRender(); // 重新載入資料
+        modal.style.display = "none";
+      } else {
+        alert("報價失敗，請稍後再試");
+      }
+    } catch (error) {
+      console.error("報價失敗:", error);
+      alert("系統錯誤，請稍後再試");
+    }
+  };
+
+  // 更新加值服務報價
+  window.updateServiceQuote = async (orderId) => {
+    const quoteInput = document.getElementById(`update-quote-${orderId}`);
+    const amount = parseFloat(quoteInput.value);
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("請輸入有效的報價金額");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/admin/orders/${orderId}/service-quote`,
+        {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({
+            serviceQuoteAmount: amount,
+            serviceQuoted: true,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        alert("報價更新成功！");
+        await fetchAndRender(); // 重新載入資料
+        modal.style.display = "none";
+      } else {
+        alert("更新失敗，請稍後再試");
+      }
+    } catch (error) {
+      console.error("更新失敗:", error);
+      alert("系統錯誤，請稍後再試");
+    }
+  };
+
+  // 取得並渲染資料
+  const fetchAndRender = async () => {
+    try {
+      const params = new URLSearchParams({
+        status: filterStatus.value,
+        assignedToId: filterUser.value,
+        search: searchInput.value,
+      }).toString();
+
+      const [usersResponse, ordersResponse, statsResponse] = await Promise.all([
+        fetch("/api/admin/users", fetchOptions),
+        fetch(`/api/admin/orders?${params}`, fetchOptions),
+        fetch("/api/admin/stats", fetchOptions),
+      ]);
+
+      if (ordersResponse.status === 401) {
+        localStorage.removeItem("authToken");
+        window.location.href = "/login.html";
+        return;
+      }
+
+      const users = await usersResponse.json();
+      const orders = await ordersResponse.json();
+      const stats = await statsResponse.json();
+
+      allUsers = users;
+      allOrders = orders.map((order) => {
+        if (typeof order.calculationResult === "string") {
+          try {
+            order.calculationResult = JSON.parse(order.calculationResult);
+          } catch (e) {
+            console.error("解析訂單 JSON 失敗:", e);
+            order.calculationResult = {};
+          }
+        }
+        return order;
+      });
+
+      // 計算待報價服務數量
+      const pendingServiceQuotes = allOrders.filter((order) => {
+        const services = parseAdditionalServices(order.additionalServices);
+        return (
+          services &&
+          (services.carryUpstairs?.needed || services.assembly?.needed) &&
+          !order.serviceQuoted
+        );
+      }).length;
+
+      // 更新統計數據
+      document.getElementById("stats-today").textContent =
+        stats.newOrdersToday || 0;
+      document.getElementById("stats-pending").textContent =
+        stats.pendingOrders || 0;
+      document.getElementById("stats-month").textContent =
+        stats.totalOrdersThisMonth || 0;
+      document.getElementById("stats-services").textContent =
+        pendingServiceQuotes;
+
+      // 更新負責人選單
+      if (filterUser.options.length <= 1) {
+        users.forEach((user) => {
+          const option = document.createElement("option");
+          option.value = user.id;
+          option.textContent = user.username;
+          filterUser.appendChild(option);
+        });
+      }
+
+      renderOrders(allOrders, allUsers);
+    } catch (error) {
+      console.error("載入後台資料失敗:", error);
+      alert("無法載入後台資料，請重新登入或聯繫管理員。");
+    }
+  };
+
+  // 事件委派
   ordersTableBody.addEventListener("click", (e) => {
     if (e.target.classList.contains("btn-view-detail")) {
       showOrderDetail(e.target.dataset.orderId);
@@ -338,200 +576,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Initial Load
+  // 篩選事件
+  filterStatus.addEventListener("change", fetchAndRender);
+  filterUser.addEventListener("change", fetchAndRender);
+  searchInput.addEventListener("input", fetchAndRender);
+  filterHasServices.addEventListener("change", () => {
+    renderOrders(allOrders, allUsers);
+  });
+
+  // 初始載入
   fetchAndRender();
+
+  // 每 30 秒自動更新（檢查新訂單）
+  setInterval(fetchAndRender, 30000);
 });
-// === 密碼重設相關功能 ===
-
-// 顯示密碼重設確認對話框
-async function resetCustomerPassword(customerId, customerName, customerEmail) {
-  // 確認對話框
-  const confirmMessage = `
-確定要重設會員的密碼嗎？
-
-會員姓名：${customerName}
-會員信箱：${customerEmail}
-
-密碼將被重設為：88888888
-會員登入後將被要求立即修改密碼
-  `;
-
-  if (!confirm(confirmMessage)) {
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("authToken");
-    const response = await fetch(
-      `/api/admin/customers/${customerId}/reset-password`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // 成功訊息
-      alert(`
-密碼重設成功！
-
-會員：${customerName} (${customerEmail})
-預設密碼：${data.temporaryPassword}
-
-請通知會員使用預設密碼登入，並建議立即修改密碼。
-      `);
-
-      // 可選：重新載入會員列表以更新狀態
-      if (typeof fetchAndRender === "function") {
-        fetchAndRender();
-      }
-    } else {
-      alert(`密碼重設失敗：${data.error}`);
-    }
-  } catch (error) {
-    console.error("密碼重設錯誤:", error);
-    alert("網路錯誤，請稍後再試");
-  }
-}
-
-// 在渲染訂單或會員列表時，加入重設密碼按鈕
-// 修改原本的 renderOrders 函數，在會員資訊後面加入按鈕
-// 找到顯示會員資訊的地方，加入以下按鈕：
-
-function addResetPasswordButton(order) {
-  // 只有當訂單有關聯會員時才顯示按鈕
-  if (order.customer && order.customer.id) {
-    return `
-      <button 
-        onclick="resetCustomerPassword('${order.customer.id}', '${order.customer.name}', '${order.customer.email}')"
-        style="
-          padding: 3px 8px;
-          font-size: 12px;
-          background-color: #e67e22;
-          color: white;
-          border: none;
-          border-radius: 3px;
-          cursor: pointer;
-          margin-left: 5px;
-        "
-        title="重設為預設密碼 88888888"
-      >
-        重設密碼
-      </button>
-    `;
-  }
-  return "";
-}
-
-// === 會員管理頁面功能（如果有獨立的會員管理頁面）===
-
-// 載入會員列表（新增或修改現有函數）
-async function loadCustomers() {
-  try {
-    const token = localStorage.getItem("authToken");
-    const response = await fetch("/api/admin/customers", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) throw new Error("載入會員失敗");
-
-    const customers = await response.json();
-
-    // 顯示會員列表
-    const tableBody = document.getElementById("customersTableBody");
-    if (tableBody) {
-      tableBody.innerHTML = customers
-        .map(
-          (customer) => `
-        <tr>
-          <td>${customer.name}</td>
-          <td>${customer.email}</td>
-          <td>${customer.phone || "-"}</td>
-          <td>${customer._count.orders} 筆</td>
-          <td>
-            <span style="
-              padding: 3px 8px;
-              border-radius: 3px;
-              font-size: 12px;
-              background-color: ${customer.isActive ? "#27ae60" : "#e74c3c"};
-              color: white;
-            ">
-              ${customer.isActive ? "啟用" : "停用"}
-            </span>
-          </td>
-          <td>
-            ${
-              customer.needPasswordChange
-                ? '<span style="color: #e67e22; font-weight: bold;">需要修改</span>'
-                : '<span style="color: #27ae60;">正常</span>'
-            }
-          </td>
-          <td>
-            <button 
-              onclick="resetCustomerPassword('${customer.id}', '${
-            customer.name
-          }', '${customer.email}')"
-              class="btn"
-              style="
-                padding: 5px 10px;
-                font-size: 14px;
-                background-color: #e67e22;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-              "
-            >
-              重設密碼
-            </button>
-          </td>
-        </tr>
-      `
-        )
-        .join("");
-    }
-  } catch (error) {
-    console.error("載入會員列表失敗:", error);
-  }
-}
-
-// 查看密碼重設歷史記錄
-async function viewPasswordResetHistory(customerId) {
-  try {
-    const token = localStorage.getItem("authToken");
-    const response = await fetch(
-      `/api/admin/customers/${customerId}/password-reset-history`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const data = await response.json();
-
-    if (data.resetHistory && data.resetHistory.length > 0) {
-      const historyText = data.resetHistory
-        .map(
-          (record) =>
-            `${new Date(record.resetAt).toLocaleString()} - 由 ${
-              record.resetBy
-            } 重設`
-        )
-        .join("\n");
-
-      alert(`密碼重設記錄：\n\n${historyText}`);
-    } else {
-      alert("此會員沒有密碼重設記錄");
-    }
-  } catch (error) {
-    console.error("查詢重設記錄失敗:", error);
-  }
-}
