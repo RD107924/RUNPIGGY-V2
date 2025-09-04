@@ -642,21 +642,6 @@ select option:disabled {
   height: auto; /* 高度自動，保持圖片比例 */
 }
 /* 在 public/style.css 檔案末尾添加以下內容 */
-
-/* 強制覆蓋最終總計費用區塊的樣式 */
-.result-section:last-of-type {
-  background-color: #0b79e8 !important; /* 與其他區塊相同的灰白色背景 */
-  background-image: none !important; /* 移除任何背景圖片或漸層 */
-  border: 1px solid #0b79e8 !important; /* 與其他區塊相同的邊框 */
-}
-
-/* 或者使用更具體的選擇器 */
-#resultsContainer .result-section:last-child {
-  background: #f8f9fa !important;
-  background-image: none !important;
-  border: 1px solid #e9ecef !important;
-}
-
 /* 如果您想要藍色主題（與按鈕和標題一致） */
 #resultsContainer .result-section:last-child {
   background: linear-gradient(135deg, #e9f5ff 0%, #d1e7ff 100%) !important;
@@ -672,19 +657,4 @@ select option:disabled {
   color: #1a73e8 !important; /* 改為藍色 */
   font-size: 32px;
   font-weight: bold;
-}
-
-/* 移除紫色背景的任何可能來源 */
-.result-section[style*="background"] {
-  background: #f8f9fa !important;
-}
-
-/* 確保 quote.html 頁面也套用相同樣式 */
-#quoteResultContainer .result-section:last-child {
-  background: #f8f9fa !important;
-  border: 1px solid #e9ecef !important;
-}
-
-#quoteResultContainer .result-section:last-child .total-cost {
-  color: #1a73e8 !important;
 }
