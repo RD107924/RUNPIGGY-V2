@@ -1,4 +1,4 @@
-// public/script.js - 完整版本，會員登入連結移至 LINE 暱稱旁邊
+// public/script.js - 優化版本，含詳細計算公式和超重超長費
 
 document.addEventListener("DOMContentLoaded", () => {
   // --- 檢查會員登入狀態 ---
@@ -81,6 +81,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const VOLUME_DIVISOR = 28317;
   const CBM_TO_CAI_FACTOR = 35.3;
   const OVERSIZED_LIMIT = 300;
+  const OVERWEIGHT_LIMIT = 100; // 新增：超重限制
+  const OVERWEIGHT_FEE = 800; // 新增：超重費
+  const OVERSIZED_FEE = 800; // 新增：超長費
   let itemCount = 0;
 
   // --- 2. 獲取 HTML 元素 ---
@@ -312,6 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
               height = 0,
               cbm = 0;
             let hasOversizedItemOnThisItem = false;
+            let isOverweight = false;
 
             if (calcMethod === "dimensions") {
               length = parseFloat(
@@ -343,6 +347,12 @@ document.addEventListener("DOMContentLoaded", () => {
               if (isNaN(cbm) || isNaN(singleWeight)) return null;
               singleVolume = Math.ceil(cbm * CBM_TO_CAI_FACTOR);
             }
+
+            // 檢查是否超重
+            if (singleWeight > OVERWEIGHT_LIMIT) {
+              isOverweight = true;
+            }
+
             return {
               id: index + 1,
               name,
@@ -352,7 +362,11 @@ document.addEventListener("DOMContentLoaded", () => {
               singleVolume,
               cbm,
               calcMethod,
+              length,
+              width,
+              height,
               hasOversizedItem: hasOversizedItemOnThisItem,
+              isOverweight: isOverweight,
             };
           })
           .filter((item) => item !== null);
@@ -364,9 +378,20 @@ document.addEventListener("DOMContentLoaded", () => {
         let initialSeaFreightCost = 0;
         let totalShipmentVolume = 0;
         let hasOversizedItem = false;
+        let totalOverweightFee = 0;
+        let totalOversizedFee = 0;
 
         allItemsData.forEach((item) => {
-          if (item.hasOversizedItem) hasOversizedItem = true;
+          if (item.hasOversizedItem) {
+            hasOversizedItem = true;
+            item.oversizedFee = OVERSIZED_FEE * item.quantity;
+            totalOversizedFee += item.oversizedFee;
+          }
+          if (item.isOverweight) {
+            item.overweightFee = OVERWEIGHT_FEE * item.quantity;
+            totalOverweightFee += item.overweightFee;
+          }
+
           const rateInfo = rates[item.type];
           item.rateInfo = rateInfo;
           const totalItemWeight = item.singleWeight * item.quantity;
@@ -393,7 +418,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (remoteAreaRate > 0) {
           remoteFee = totalCbm * remoteAreaRate;
         }
-        const finalTotal = finalSeaFreightCost + remoteFee;
+        const finalTotal =
+          finalSeaFreightCost +
+          remoteFee +
+          totalOverweightFee +
+          totalOversizedFee;
 
         const calculationResultData = {
           allItemsData,
@@ -404,6 +433,8 @@ document.addEventListener("DOMContentLoaded", () => {
           remoteAreaRate,
           remoteFee,
           hasOversizedItem,
+          totalOverweightFee,
+          totalOversizedFee,
           finalTotal,
         };
 
@@ -467,62 +498,138 @@ document.addEventListener("DOMContentLoaded", () => {
       remoteAreaRate,
       remoteFee,
       hasOversizedItem,
+      totalOverweightFee,
+      totalOversizedFee,
       finalTotal,
     } = data;
+
     let resultsHTML = '<div class="result-section">';
     resultsHTML += `<h4>--- 費用計算明細 (逐筆) ---</h4>`;
+
     allItemsData.forEach((item) => {
-      resultsHTML += `<p><strong>[${item.name} × ${item.quantity} - ${item.rateInfo.name}]</strong><br>`;
+      resultsHTML += `<div style="background-color: #f9f9f9; padding: 10px; margin-bottom: 15px; border-radius: 5px;">`;
+      resultsHTML += `<p><strong style="font-size: 16px;">[${item.name} × ${item.quantity} 件 - ${item.rateInfo.name}]</strong></p>`;
+
+      // 材積計算公式
       if (item.calcMethod === "cbm" && item.cbm > 0) {
-        resultsHTML += `<small style="color:#555;">(單件以立方米輸入: ${item.cbm} 方 × ${CBM_TO_CAI_FACTOR} = ${item.singleVolume} 材)<br></small>`;
+        resultsHTML += `<div style="background-color: #fff; padding: 8px; margin: 5px 0; border-left: 3px solid #3498db;">`;
+        resultsHTML += `<small style="color:#555;"><strong>體積換算：</strong></small><br>`;
+        resultsHTML += `<small style="color:#555;">單件立方米: ${item.cbm} 方 × ${CBM_TO_CAI_FACTOR} = ${item.singleVolume} 材</small>`;
+        resultsHTML += `</div>`;
+      } else if (item.calcMethod === "dimensions") {
+        resultsHTML += `<div style="background-color: #fff; padding: 8px; margin: 5px 0; border-left: 3px solid #3498db;">`;
+        resultsHTML += `<small style="color:#555;"><strong>材積計算：</strong></small><br>`;
+        resultsHTML += `<small style="color:#555;">(${item.length}cm × ${item.width}cm × ${item.height}cm) ÷ ${VOLUME_DIVISOR} = ${item.singleVolume} 材/件</small>`;
+        resultsHTML += `</div>`;
       }
-      resultsHTML += `<small style="color:#555;">(總材積: ${item.singleVolume} 材/件 × ${item.quantity} = ${item.totalVolume} 材 | 總重量: ${item.singleWeight} kg/件 × ${item.quantity} = ${item.totalWeight} kg)<br></small>`;
+
+      // 總材積與總重量
+      resultsHTML += `<div style="background-color: #fff; padding: 8px; margin: 5px 0; border-left: 3px solid #9b59b6;">`;
+      resultsHTML += `<small style="color:#555;"><strong>數量計算：</strong></small><br>`;
+      resultsHTML += `<small style="color:#555;">總材積: ${item.singleVolume} 材/件 × ${item.quantity} 件 = ${item.totalVolume} 材</small><br>`;
+      resultsHTML += `<small style="color:#555;">總重量: ${item.singleWeight} kg/件 × ${item.quantity} 件 = ${item.totalWeight} kg</small>`;
+      resultsHTML += `</div>`;
+
+      // 費用計算
+      resultsHTML += `<div style="background-color: #fff; padding: 8px; margin: 5px 0; border-left: 3px solid #27ae60;">`;
+      resultsHTML += `<small style="color:#555;"><strong>運費計算：</strong></small><br>`;
       resultsHTML += `材積費用: ${item.totalVolume} 材 × ${
         item.rateInfo.volumeRate
-      } = ${Math.round(item.itemVolumeCost).toLocaleString()} 台幣<br>`;
-      resultsHTML += `重量費用: ${item.totalWeight} 公斤 × ${
+      } 元/材 = <span style="color: #e74c3c; font-weight: bold;">${Math.round(
+        item.itemVolumeCost
+      ).toLocaleString()} 台幣</span><br>`;
+      resultsHTML += `重量費用: ${item.totalWeight} kg × ${
         item.rateInfo.weightRate
-      } = ${Math.round(item.itemWeightCost).toLocaleString()} 台幣<br>`;
-      resultsHTML += `→ 此筆費用(取較高者): <strong>${Math.round(
+      } 元/kg = <span style="color: #e74c3c; font-weight: bold;">${Math.round(
+        item.itemWeightCost
+      ).toLocaleString()} 台幣</span><br>`;
+      resultsHTML += `→ 基本運費(取較高者): <strong style="color: #e74c3c; font-size: 15px;">${Math.round(
         item.itemFinalCost
-      ).toLocaleString()} 台幣</strong></p>`;
+      ).toLocaleString()} 台幣</strong>`;
+      resultsHTML += `</div>`;
+
+      // 額外費用
+      if (item.isOverweight || item.hasOversizedItem) {
+        resultsHTML += `<div style="background-color: #fff3cd; padding: 8px; margin: 5px 0; border-left: 3px solid #ffc107;">`;
+        resultsHTML += `<small style="color:#856404;"><strong>額外費用：</strong></small><br>`;
+        if (item.isOverweight) {
+          resultsHTML += `<small style="color:#856404;">⚠ 單件超重 (>${OVERWEIGHT_LIMIT}kg): ${OVERWEIGHT_FEE} 元/件 × ${
+            item.quantity
+          } 件 = <span style="color: #e74c3c; font-weight: bold;">${item.overweightFee.toLocaleString()} 台幣</span></small><br>`;
+        }
+        if (item.hasOversizedItem) {
+          resultsHTML += `<small style="color:#856404;">⚠ 單邊超長 (>${OVERSIZED_LIMIT}cm): ${OVERSIZED_FEE} 元/件 × ${
+            item.quantity
+          } 件 = <span style="color: #e74c3c; font-weight: bold;">${item.oversizedFee.toLocaleString()} 台幣</span></small><br>`;
+        }
+        resultsHTML += `</div>`;
+      }
+
+      resultsHTML += `</div>`;
     });
+
     resultsHTML += `<hr>`;
-    resultsHTML += `<p><strong>初步海運費 (所有項目加總): ${Math.round(
+
+    // 費用彙總
+    resultsHTML += `<div style="background-color: #e8f4f8; padding: 15px; border-radius: 5px; margin: 10px 0;">`;
+    resultsHTML += `<p><strong>初步海運費 (所有項目加總): <span style="color: #e74c3c;">${Math.round(
       initialSeaFreightCost
-    ).toLocaleString()} 台幣</strong></p>`;
+    ).toLocaleString()} 台幣</span></strong></p>`;
+
     if (initialSeaFreightCost < MINIMUM_CHARGE) {
       resultsHTML += `<p style="color: #e74c3c;">↳ 未達最低消費 ${MINIMUM_CHARGE} 元，故海運費以低消計: <strong>${finalSeaFreightCost.toLocaleString()} 台幣</strong></p>`;
     } else {
       resultsHTML += `<p style="color: green;">↳ 已超過最低消費，海運費為: <strong>${finalSeaFreightCost.toLocaleString()} 台幣</strong></p>`;
     }
+
+    if (totalOverweightFee > 0) {
+      resultsHTML += `<p><strong>總超重費: <span style="color: #e74c3c;">${totalOverweightFee.toLocaleString()} 台幣</span></strong></p>`;
+    }
+
+    if (totalOversizedFee > 0) {
+      resultsHTML += `<p><strong>總超長費: <span style="color: #e74c3c;">${totalOversizedFee.toLocaleString()} 台幣</span></strong></p>`;
+    }
+
     if (remoteAreaRate > 0) {
       resultsHTML += `<hr>`;
-      resultsHTML += `<p><strong>偏遠地區附加費:</strong><br>`;
-      resultsHTML += `(總材積 ${totalShipmentVolume} 材 ÷ ${CBM_TO_CAI_FACTOR} = ${totalCbm.toFixed(
+      resultsHTML += `<div style="background-color: #fff; padding: 10px; border-left: 3px solid #e67e22;">`;
+      resultsHTML += `<p><strong>偏遠地區附加費計算：</strong></p>`;
+      resultsHTML += `<p>(總材積 ${totalShipmentVolume} 材 ÷ ${CBM_TO_CAI_FACTOR} = ${totalCbm.toFixed(
         2
-      )} 方) × ${remoteAreaRate.toLocaleString()} 元/方<br>`;
-      resultsHTML += `→ 費用: <strong>${Math.round(
+      )} 方) × ${remoteAreaRate.toLocaleString()} 元/方</p>`;
+      resultsHTML += `<p>→ 偏遠費用: <strong style="color: #e74c3c;">${Math.round(
         remoteFee
       ).toLocaleString()} 台幣</strong></p>`;
+      resultsHTML += `</div>`;
     }
     resultsHTML += `</div>`;
+
+    resultsHTML += `</div>`;
+
+    // 最終總計
     resultsHTML += `
-            <div class="result-section" style="text-align: center;">
-                <h2>最終總計費用</h2>
-                <div class="total-cost">${Math.round(
-                  finalTotal
-                ).toLocaleString()} 台幣</div>
-                <small>(海運費 ${Math.round(
-                  finalSeaFreightCost
-                ).toLocaleString()} + 偏遠費 ${Math.round(
-      remoteFee
-    ).toLocaleString()})</small>
-            </div>
-        `;
-    if (hasOversizedItem) {
-      resultsHTML += `<div class="final-disclaimer"><strong>提醒：</strong>您的貨物中有單邊超過 300 公分的品項，將會產生超長費 (600元/件 起)，實際費用以入庫報價為準。</div>`;
-    }
+      <div class="result-section" style="text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px;">
+        <h2 style="color: white;">最終總計費用</h2>
+        <div class="total-cost" style="font-size: 36px; font-weight: bold; margin: 15px 0;">${Math.round(
+          finalTotal
+        ).toLocaleString()} 台幣</div>
+        <small style="color: #f0f0f0;">
+          (海運費 ${Math.round(finalSeaFreightCost).toLocaleString()} 
+          + 偏遠費 ${Math.round(remoteFee).toLocaleString()}
+          ${
+            totalOverweightFee > 0
+              ? ` + 超重費 ${totalOverweightFee.toLocaleString()}`
+              : ""
+          }
+          ${
+            totalOversizedFee > 0
+              ? ` + 超長費 ${totalOversizedFee.toLocaleString()}`
+              : ""
+          })
+        </small>
+      </div>
+    `;
+
     resultsHTML += `<div class="final-disclaimer">此試算表僅適用於小跑豬傢俱專線，試算費用僅供參考，最終金額以實際入庫丈量為準。</div>`;
     resultsContainer.innerHTML = resultsHTML;
   }
@@ -689,7 +796,4 @@ document.addEventListener("DOMContentLoaded", () => {
     memberInfoContainer.appendChild(welcomeLink);
     lineNicknameLabel.appendChild(memberInfoContainer);
   }
-
-  // 移除原本在底部 admin-login-link 的會員連結插入程式碼
-  // 因為現在已經移到 LINE 暱稱旁邊了
 });
