@@ -590,18 +590,72 @@ document.addEventListener("DOMContentLoaded", () => {
       resultsHTML += `<p><strong>總超長費: <span style="color: #e74c3c;">${totalOversizedFee.toLocaleString()} 台幣</span></strong></p>`;
     }
 
+    // ========== 修改偏遠地區費用顯示部分 ==========
     if (remoteAreaRate > 0) {
+      // 取得選擇的地區名稱
+      const selectedOption =
+        deliveryLocationSelect.options[deliveryLocationSelect.selectedIndex];
+      const areaName = selectedOption.textContent;
+
+      // 檢查是否為東部需要客服確認的地區
+      const needCustomerService =
+        remoteAreaRate === 4500 &&
+        (areaName.includes("宜蘭其他地區") ||
+          areaName.includes("花蓮全區") ||
+          areaName.includes("台東全區"));
+
       resultsHTML += `<hr>`;
       resultsHTML += `<div style="background-color: #fff; padding: 10px; border-left: 3px solid #e67e22;">`;
       resultsHTML += `<p><strong>偏遠地區附加費計算：</strong></p>`;
+      resultsHTML += `<p>配送地區：<strong style="color: #e67e22;">${areaName}</strong></p>`;
       resultsHTML += `<p>(總材積 ${totalShipmentVolume} 材 ÷ ${CBM_TO_CAI_FACTOR} = ${totalCbm.toFixed(
         2
       )} 方) × ${remoteAreaRate.toLocaleString()} 元/方</p>`;
       resultsHTML += `<p>→ 偏遠費用: <strong style="color: #e74c3c;">${Math.round(
         remoteFee
-      ).toLocaleString()} 台幣</strong></p>`;
+      ).toLocaleString()} 台幣${
+        needCustomerService ? " (起)" : ""
+      }</strong></p>`;
+
+      // 如果是東部地區，加上提醒
+      if (needCustomerService) {
+        resultsHTML += `
+          <div style="background: #fff3cd; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ffc107;">
+            <strong style="color: #ff6b6b;">⚠️ 東部地區重要提醒：</strong>
+            <p style="margin: 8px 0 5px 0; color: #856404; font-size: 14px;">
+              您選擇的是<strong>${areaName
+                .replace("⚠️", "")
+                .trim()}</strong>，此地區運輸路線較為特殊。
+            </p>
+            <p style="margin: 5px 0; color: #856404; font-size: 14px;">
+              顯示金額 <strong>NT$ ${Math.round(
+                remoteFee
+              ).toLocaleString()}</strong> 為<strong>起始價格</strong>，
+              實際運費可能會根據：
+            </p>
+            <ul style="margin: 5px 0 10px 20px; color: #856404; font-size: 13px;">
+              <li>具體配送地址的偏遠程度</li>
+              <li>貨物特性（易碎、特殊形狀等）</li>
+              <li>當時的運輸路況與季節因素</li>
+            </ul>
+            <p style="margin: 10px 0 5px 0; color: #856404; font-size: 14px;">
+              <strong>建議您聯繫客服獲取準確報價：</strong>
+            </p>
+            <a href="https://lin.ee/eK6HptX" target="_blank" 
+               style="display: inline-block; margin-top: 10px; padding: 10px 25px; 
+                      background: #00c300; color: white; text-decoration: none; 
+                      border-radius: 20px; font-weight: bold; font-size: 15px;
+                      box-shadow: 0 2px 5px rgba(0,195,0,0.3);">
+              📞 立即聯繫 LINE 客服
+            </a>
+          </div>
+        `;
+      }
+
       resultsHTML += `</div>`;
     }
+    // ========== 修改結束 ==========
+
     resultsHTML += `</div>`;
 
     resultsHTML += `</div>`;
