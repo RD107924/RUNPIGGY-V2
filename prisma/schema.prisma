@@ -54,14 +54,14 @@ model Customer {
 model ShipmentOrder {
   id                String    @id @default(cuid())
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  updatedAt         DateTime  @default(now()) @updatedAt  // 添加預設值
   lineNickname      String?
   recipientName     String
   address           String
   phone             String
-  email             String    // 新增 - 電子發票用
+  email             String    @default("pending@example.com") // 添加預設值 - 電子發票用
   idNumber          String?
-  taxId             String?   // 新增 - 統一編號（選填）
+  taxId             String?   // 統一編號（選填）
   calculationResult String    // JSON 字串儲存計算結果
 
   // 用於後台追蹤的欄位
