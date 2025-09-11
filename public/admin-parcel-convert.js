@@ -164,7 +164,7 @@
     const rateInfo = rates[furnitureType];
 
     // 計算材積
-    const singleVolume = (length * width * height) / VOLUME_DIVISOR;
+    const singleVolume = Math.ceil((length * width * height) / VOLUME_DIVISOR);
     const cbm = singleVolume / CBM_TO_CAI_FACTOR;
 
     // 計算基本運費
