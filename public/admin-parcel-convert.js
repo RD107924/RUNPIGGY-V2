@@ -725,7 +725,10 @@
   }
 
   async function handleConvertToOrder(e) {
-    e.preventDefault();
+    // 安全檢查 event 物件
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
 
     if (isConverting) {
       return;
@@ -1076,3 +1079,8 @@
     calculateShipping: calculateShippingFee, // 新增：匯出運費計算函數
   };
 })();
+// ===== 全域函數（供 HTML 呼叫）=====
+window.convertToOrder = function (e) {
+  // 呼叫實際的處理函數，不傳遞 event
+  handleConvertToOrder();
+};
