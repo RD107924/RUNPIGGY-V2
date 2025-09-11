@@ -1,4 +1,4 @@
-// public/admin-enhanced.js - 增強版管理後台（含加值服務管理）
+// public/admin.js - 完整優化版管理後台（含 email、taxId 和加值服務管理）
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("authToken");
   if (!token) {
@@ -124,6 +124,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             }</span>`
           : "";
 
+        // 顯示發票類型
+        const invoiceType = order.taxId
+          ? `<span title="統編: ${order.taxId}" style="color: #0066cc;">公司</span>`
+          : `<span style="color: #666;">個人</span>`;
+
         return `
             <tr ${hasServices ? 'style="background-color: #fffbf0;"' : ""}>
                 <td data-label="操作">
@@ -134,8 +139,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td data-label="訂單時間">${new Date(order.createdAt)
                   .toLocaleString("sv")
                   .replace(" ", "<br>")}</td>
-                <td data-label="收件人">${order.recipientName}</td>
-                <td data-label="聯絡電話">${order.phone}</td>
+                <td data-label="收件人">${order.recipientName}<br>
+                    <small style="color: #666;">${order.phone}</small>
+                </td>
+                <td data-label="發票">${invoiceType}<br>
+                    <small style="color: #666; word-break: break-all;">${
+                      order.email || "-"
+                    }</small>
+                </td>
                 <td data-label="總金額">${
                   calculationResult?.finalTotal?.toLocaleString() || "N/A"
                 } 台幣</td>
@@ -174,7 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .join("");
   };
 
-  // 顯示訂單詳情（含加值服務）
+  // 顯示訂單詳情（含 email 和 taxId）
   const showOrderDetail = (orderId) => {
     const order = allOrders.find((o) => o.id === orderId);
     if (!order) return;
@@ -236,8 +247,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       (services.carryUpstairs?.needed || services.assembly?.needed)
     ) {
       servicesHtml = `
-        <div class="service-details">
-          <h4>📦 加值服務需求</h4>
+        <div class="service-details" style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0;">
+          <h4 style="color: #856404;">📦 加值服務需求</h4>
           ${
             services.carryUpstairs?.needed
               ? `
@@ -251,6 +262,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                     : "無電梯"
                 }</li>
               </ul>
+              <p style="color: #856404; font-size: 0.9em; margin: 5px 0 0 20px;">
+                ⚠️ 費用由客戶現場支付給司機
+              </p>
             </div>
           `
               : ""
@@ -258,18 +272,21 @@ document.addEventListener("DOMContentLoaded", async () => {
           ${
             services.assembly?.needed
               ? `
-            <div class="service-item">
+            <div class="service-item" style="margin-top: 10px;">
               <strong>組裝服務：</strong>
               <p style="margin: 5px 0 0 20px;">${
                 services.assembly.items || "未說明"
               }</p>
+              <p style="color: #856404; font-size: 0.9em; margin: 5px 0 0 20px;">
+                📞 請提供師傅聯繫方式給客戶
+              </p>
             </div>
           `
               : ""
           }
           
-          <div class="quote-section">
-            <h5>加值服務報價</h5>
+          <div class="quote-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ffc107;">
+            <h5>加值服務報價（參考用）</h5>
             ${
               order.serviceQuoted
                 ? `
@@ -278,21 +295,25 @@ document.addEventListener("DOMContentLoaded", async () => {
                   order.serviceQuoteAmount?.toLocaleString() || 0
                 }
               </p>
-              <div class="quote-input">
+              <div class="quote-input" style="display: flex; gap: 10px; margin-top: 10px;">
                 <input type="number" id="update-quote-${orderId}" 
                        value="${order.serviceQuoteAmount || 0}" 
-                       placeholder="修改報價金額">
-                <button class="btn-quote" onclick="updateServiceQuote('${orderId}')">
+                       placeholder="修改報價金額"
+                       style="flex: 1; padding: 5px;">
+                <button class="btn-quote" onclick="updateServiceQuote('${orderId}')"
+                        style="padding: 5px 15px; background: #ffc107; border: none; border-radius: 3px; cursor: pointer;">
                   更新報價
                 </button>
               </div>
             `
                 : `
               <p style="color: orange;">⚠️ 尚未報價</p>
-              <div class="quote-input">
+              <div class="quote-input" style="display: flex; gap: 10px; margin-top: 10px;">
                 <input type="number" id="service-quote-${orderId}" 
-                       placeholder="輸入報價金額 (台幣)">
-                <button class="btn-quote" onclick="submitServiceQuote('${orderId}')">
+                       placeholder="輸入報價金額 (台幣)"
+                       style="flex: 1; padding: 5px;">
+                <button class="btn-quote" onclick="submitServiceQuote('${orderId}')"
+                        style="padding: 5px 15px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">
                   提交報價
                 </button>
               </div>
@@ -309,7 +330,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       `;
     }
 
-    // 顯示詳細資訊
+    // 顯示詳細資訊（包含 email 和 taxId）
     modalBody.innerHTML = `
             <h3 style="color: #1a73e8; border-bottom: 2px solid #1a73e8; padding-bottom: 10px;">訂單詳細資訊</h3>
             
@@ -321,14 +342,34 @@ document.addEventListener("DOMContentLoaded", async () => {
                     }</p>
                     <p><strong>收件人:</strong> ${order.recipientName}</p>
                     <p><strong>電話:</strong> ${order.phone}</p>
+                    <p><strong>Email:</strong> ${order.email || "未提供"}</p>
                     <p><strong>地址:</strong> ${order.address}</p>
                     <p><strong>身分證號:</strong> ${
                       order.idNumber || "未提供"
                     }</p>
+                    ${
+                      order.taxId
+                        ? `<p><strong>統一編號:</strong> ${order.taxId}</p>`
+                        : '<p><strong>統一編號:</strong> <span style="color: #999;">無（個人）</span></p>'
+                    }
                     <p><strong>訂單時間:</strong> ${new Date(
                       order.createdAt
                     ).toLocaleString()}</p>
                 </div>
+            </div>
+            
+            <!-- 發票資訊 -->
+            <div style="background-color: #d1ecf1; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                <h4 style="color: #0c5460; margin-top: 0;">📧 電子發票資訊</h4>
+                <p><strong>發票類型:</strong> ${
+                  order.taxId ? "公司發票" : "個人發票"
+                }</p>
+                <p><strong>發票寄送信箱:</strong> ${order.email}</p>
+                ${
+                  order.taxId
+                    ? `<p><strong>統一編號:</strong> ${order.taxId}</p>`
+                    : ""
+                }
             </div>
             
             ${servicesHtml}
@@ -358,7 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                       order.serviceQuoted
                         ? `
                     <tr>
-                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>加值服務費:</strong></td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>加值服務費（參考）:</strong></td>
                         <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">${(
                           order.serviceQuoteAmount || 0
                         ).toLocaleString()} 台幣</td>
@@ -378,7 +419,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                       order.serviceQuoted
                         ? `
                     <tr style="background-color: #e8f5e9;">
-                        <td style="padding: 12px; font-size: 1.3em;"><strong>含加值服務總計:</strong></td>
+                        <td style="padding: 12px; font-size: 1.3em;"><strong>含加值服務總計（參考）:</strong></td>
                         <td style="padding: 12px; text-align: right; font-size: 1.3em; color: #2e7d32;">
                             <strong>${(
                               (calculationResult?.finalTotal || 0) +

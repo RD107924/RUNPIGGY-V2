@@ -1,4 +1,4 @@
-// server.js (整合會員系統與包裹預報版本)
+// server.js (整合會員系統與包裹預報版本 - 包含 email 和 taxId)
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const path = require("path");
@@ -48,7 +48,7 @@ app.use("/api/customers", customerRoutes); // 會員相關 API
 app.use("/api/parcels", parcelRoutes); // 包裹預報 API
 app.use("/api/admin", authMiddleware, adminRoutes); // 受保護的後台管理 API
 
-// 客戶提交正式訂單的 API (支援會員和非會員)
+// 客戶提交正式訂單的 API (支援會員和非會員) - 更新版本包含 email 和 taxId
 app.post("/api/orders", async (req, res) => {
   try {
     const {
@@ -56,14 +56,45 @@ app.post("/api/orders", async (req, res) => {
       recipientName,
       address,
       phone,
+      email, // 新增 - 必填
       idNumber,
+      taxId, // 新增 - 選填
       calculationResult,
       additionalServices,
       customerToken,
     } = req.body;
 
-    if (!recipientName || !address || !phone || !calculationResult) {
-      return res.status(400).json({ error: "缺少必要的訂單資訊" });
+    // 驗證必填欄位 - 現在包含 email
+    if (
+      !recipientName ||
+      !address ||
+      !phone ||
+      !email ||
+      !idNumber ||
+      !calculationResult
+    ) {
+      return res.status(400).json({
+        error: "缺少必要的訂單資訊",
+        details: {
+          recipientName: !recipientName ? "缺少收件人姓名" : null,
+          address: !address ? "缺少地址" : null,
+          phone: !phone ? "缺少電話" : null,
+          email: !email ? "缺少電子郵件" : null,
+          idNumber: !idNumber ? "缺少身分證字號" : null,
+          calculationResult: !calculationResult ? "缺少計算結果" : null,
+        },
+      });
+    }
+
+    // 驗證 Email 格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "電子郵件格式不正確" });
+    }
+
+    // 驗證統一編號格式（如果有提供）
+    if (taxId && !/^\d{8}$/.test(taxId)) {
+      return res.status(400).json({ error: "統一編號格式錯誤，必須是8位數字" });
     }
 
     // 檢查是否為會員下單
@@ -96,13 +127,16 @@ app.post("/api/orders", async (req, res) => {
       finalTotal: calculationResult.finalTotal,
     };
 
+    // 創建新訂單 - 包含 email 和 taxId
     const newOrder = await prisma.shipmentOrder.create({
       data: {
         lineNickname: lineNickname || "未提供",
         recipientName,
         address,
         phone,
+        email, // 新增
         idNumber,
+        taxId: taxId || null, // 新增 - 可為空
         calculationResult: JSON.stringify(cleanCalculationResult),
         additionalServices: additionalServices
           ? JSON.stringify(additionalServices)
@@ -130,10 +164,28 @@ app.post("/api/orders", async (req, res) => {
       }
     }
 
+    // 記錄發票資訊
+    if (taxId) {
+      console.log(`訂單 ${newOrder.id} 需要開立公司發票，統一編號：${taxId}`);
+    }
+    console.log(`電子發票將寄送至：${email}`);
+
     res.status(201).json(newOrder);
   } catch (error) {
     console.error("建立訂單時發生錯誤:", error);
-    res.status(500).json({ error: "伺服器內部錯誤" });
+
+    // 更詳細的錯誤訊息
+    if (error.code === "P2002") {
+      res.status(400).json({ error: "訂單資料重複" });
+    } else if (error.code === "P2003") {
+      res.status(400).json({ error: "關聯資料錯誤" });
+    } else {
+      res.status(500).json({
+        error: "伺服器內部錯誤",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
   }
 });
 
@@ -181,26 +233,50 @@ app.get("/parcel.html", (req, res) => {
     res.redirect("/customer.html");
   }
 });
+
 // 公開包裹預報頁面路由
 app.get("/parcel-public", (req, res) => {
   const filePath = path.join(__dirname, "public", "parcel-public.html");
-  res.sendFile(filePath);
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    // 如果檔案不存在，顯示錯誤訊息
+    res.status(404).send("包裹預報頁面尚未建立");
+  }
 });
-// 將所有其他請求導向主計算器頁面
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+
+// 訂單頁面路由
+app.get("/order.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "order.html"));
 });
 
 // 錯誤處理中間件
 app.use((err, req, res, next) => {
   console.error("伺服器錯誤:", err.stack);
-  res.status(500).json({ error: "伺服器內部錯誤" });
+  res.status(500).json({
+    error: "伺服器內部錯誤",
+    details: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
 });
 
-// 啟動伺服器 - 只有一個 app.listen！
+// 404 處理 - 必須在所有路由之後，錯誤處理之前
+app.use((req, res) => {
+  // API 請求返回 JSON
+  if (req.path.startsWith("/api/")) {
+    res.status(404).json({ error: "找不到該 API 端點" });
+  } else {
+    // 其他請求返回主頁
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+  }
+});
+
+// 啟動伺服器
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`伺服器正在 port ${PORT} 上運行`);
+const HOST = process.env.HOST || "0.0.0.0";
+
+app.listen(PORT, HOST, () => {
+  console.log(`伺服器正在 ${HOST}:${PORT} 上運行`);
   console.log(`環境: ${process.env.NODE_ENV || "development"}`);
 
   if (process.env.NODE_ENV === "production") {
@@ -208,13 +284,27 @@ app.listen(PORT, "0.0.0.0", () => {
   } else {
     console.log(`本地訪問: http://localhost:${PORT}`);
   }
-});
-// 新增公開包裹預報頁面
-app.get("/parcel-public", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "parcel-public.html"));
+
+  // 顯示資料庫連線狀態
+  prisma
+    .$connect()
+    .then(() => {
+      console.log("✅ 資料庫連線成功");
+    })
+    .catch((error) => {
+      console.error("❌ 資料庫連線失敗:", error);
+    });
 });
 
-// 萬用字元路由必須放最後
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// 優雅關閉
+process.on("SIGTERM", async () => {
+  console.log("收到 SIGTERM 信號，準備關閉伺服器...");
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("收到 SIGINT 信號，準備關閉伺服器...");
+  await prisma.$disconnect();
+  process.exit(0);
 });

@@ -34,6 +34,7 @@ model Customer {
   lineNickname    String?   // LINE 暱稱
   defaultAddress  String?   // 預設地址
   idNumber        String?   // 身分證字號
+  taxId           String?   // 統一編號（新增）
   isActive        Boolean   @default(true) // 帳號狀態
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -53,15 +54,18 @@ model Customer {
 model ShipmentOrder {
   id                String    @id @default(cuid())
   createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   lineNickname      String?
   recipientName     String
   address           String
   phone             String
+  email             String    // 新增 - 電子發票用
   idNumber          String?
-  calculationResult String    // SQLite 改用 String 儲存 JSON
+  taxId             String?   // 新增 - 統一編號（選填）
+  calculationResult String    // JSON 字串儲存計算結果
 
   // 用於後台追蹤的欄位
-  status            String    @default("NEEDS_PURCHASE") // 訂單進度狀態（改用 String）
+  status            String    @default("NEEDS_PURCHASE") // 訂單進度狀態
   
   // 加值服務欄位
   additionalServices String?  // JSON 字串儲存加值服務資訊
@@ -77,6 +81,8 @@ model ShipmentOrder {
   customer          Customer?   @relation("CustomerOrders", fields: [customerId], references: [id])
 
   @@index([customerId])
+  @@index([email])
+  @@index([status])
   @@map("shipment_orders")
 }
 
@@ -84,12 +90,12 @@ model ShipmentOrder {
 model CalculationQuote {
   id                String    @id @default(cuid())
   createdAt         DateTime  @default(now())
-  calculationResult String    // SQLite 改用 String 儲存 JSON
+  calculationResult String    // JSON 字串儲存計算結果
 
   @@map("calculation_quotes")
 }
 
-// 新增：包裹預報資料模型
+// 包裹預報資料模型
 model ParcelNotification {
   id                String   @id @default(cuid())
   trackingNumber    String
@@ -101,11 +107,14 @@ model ParcelNotification {
   note              String?
   status            String   @default("PENDING") // PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
   
-  // 會員關聯（選填）- 修正：添加關聯名稱
+  // 台灣收件資料（新增）
+  taiwanDelivery    String?  // JSON 字串儲存台灣收件資料
+  
+  // 會員關聯（選填）
   customerId        String?
   customer          Customer? @relation("CustomerParcels", fields: [customerId], references: [id])
   
-  // 非會員資訊（新增欄位）
+  // 非會員資訊
   guestEmail        String?  // 非會員的電子郵件
   guestPhone        String?  // 非會員的電話
   guestName         String?  // 非會員的姓名
@@ -119,6 +128,8 @@ model ParcelNotification {
   updatedAt         DateTime @updatedAt
   confirmedAt       DateTime?
   arrivedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
   
   @@index([customerId])
   @@index([trackingNumber])

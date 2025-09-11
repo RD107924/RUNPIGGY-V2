@@ -134,6 +134,13 @@
         margin-bottom: 5px;
       }
 
+      /* 新增的提示樣式 */
+      .field-hint {
+        font-size: 0.85em;
+        color: #666;
+        margin-top: 5px;
+      }
+
       /* 響應式設計 */
       @media (max-width: 768px) {
         .service-section {
@@ -159,17 +166,40 @@
           <label for="recipientName">收件人姓名 (必填)</label>
           <input type="text" id="recipientName" required />
         </div>
-        <div class="input-wrapper" style="margin-bottom: 15px">
-          <label for="address">派送地址 (必填)</label>
-          <input type="text" id="address" required />
-        </div>
+
         <div class="input-wrapper" style="margin-bottom: 15px">
           <label for="phone">聯絡電話 (必填)</label>
           <input type="tel" id="phone" required />
         </div>
+
         <div class="input-wrapper" style="margin-bottom: 15px">
-          <label for="idNumber">身分證字號 (必填，清關備查用)</label>
-          <input type="text" id="idNumber" required />
+          <label for="email">電子郵件 (必填，開立電子發票用)</label>
+          <input type="email" id="email" required />
+          <div class="field-hint">*電子發票將寄送至此信箱</div>
+        </div>
+
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="address">派送地址 (必填)</label>
+          <input type="text" id="address" required />
+        </div>
+
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="idNumber">身分證字號 (必填，海關驗櫃用)</label>
+          <input type="text" id="idNumber" required maxlength="10" />
+          <div class="field-hint">
+            *身分證字號僅用於海關驗櫃，我們會妥善保護您的個人資料
+          </div>
+        </div>
+
+        <div class="input-wrapper" style="margin-bottom: 15px">
+          <label for="taxId">統一編號 (選填)</label>
+          <input
+            type="text"
+            id="taxId"
+            maxlength="8"
+            placeholder="公司行號請填寫8位數統一編號"
+          />
+          <div class="field-hint">*如需開立公司發票，請填寫統一編號</div>
         </div>
 
         <!-- 加值服務區 -->
@@ -184,9 +214,9 @@
                 id="needCarryUpstairs"
                 onchange="toggleCarryDetails()"
               />
-              <label for="needCarryUpstairs"
-                >需要搬運上樓服務（請參考報價單的附加服務）</label
-              >
+              <label for="needCarryUpstairs">
+                需要搬運上樓服務（此部分費用請客戶自行付費給派送司機，未包含在跨境運費中）
+              </label>
             </div>
 
             <div id="carryDetails" class="service-details">
@@ -214,8 +244,8 @@
               </div>
 
               <div class="service-note">
-                💡
-                提醒：搬運費用會根據樓層、是否有電梯、貨物重量體積等因素計算，客服會另行報價。
+                ⚠️
+                請注意：搬運上樓費用需現場支付給司機，費用標準依實際情況（樓層、貨物重量體積、是否有電梯等）而定
               </div>
             </div>
           </div>
@@ -228,16 +258,16 @@
                 id="needAssembly"
                 onchange="toggleAssemblyDetails()"
               />
-              <label for="needAssembly"
-                >需要組裝服務（請向客服索取聯繫方式）</label
-              >
+              <label for="needAssembly">
+                需要傢俱組裝服務（請向客服索取師傅聯繫方式，由客戶自行預約詢價）
+              </label>
             </div>
 
             <div id="assemblyDetails" class="service-details">
               <div class="detail-group">
-                <label for="assemblyItems"
-                  >請描述需要組裝的項目（例如：床架、衣櫃、書桌等）</label
-                >
+                <label for="assemblyItems">
+                  請描述需要組裝的項目（例如：床架、衣櫃、書桌等）
+                </label>
                 <textarea
                   id="assemblyItems"
                   rows="3"
@@ -254,8 +284,7 @@
               </div>
 
               <div class="service-note">
-                💡
-                提醒：組裝費用會根據家具類型、複雜度、數量等因素計算，客服會另行報價。
+                📞 我們將提供合作師傅的聯繫方式，組裝費用請直接與師傅洽談
               </div>
             </div>
           </div>
@@ -264,7 +293,7 @@
         <!-- 價格提醒 -->
         <div class="price-notice">
           <strong>📌 重要提醒：</strong>
-          加值服務（搬運上樓、組裝）的費用不包含在運費試算中，將由客服人員根據實際情況另行報價。
+          加值服務說明：搬運上樓費用請現場支付給司機；組裝服務請自行聯繫師傅安排
         </div>
 
         <button type="submit" class="btn btn-calculate" style="width: 100%">
@@ -311,6 +340,32 @@
           document.getElementById("assemblyItems").value = "";
         }
       }
+
+      // 驗證統一編號格式
+      document.getElementById("taxId").addEventListener("input", function (e) {
+        const value = e.target.value;
+        // 只允許輸入數字
+        e.target.value = value.replace(/[^\d]/g, "");
+      });
+
+      // 驗證身分證字號格式（簡單驗證）
+      document
+        .getElementById("idNumber")
+        .addEventListener("input", function (e) {
+          const value = e.target.value.toUpperCase();
+          e.target.value = value;
+        });
+
+      // 驗證 Email 格式
+      document.getElementById("email").addEventListener("blur", function (e) {
+        const email = e.target.value;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailRegex.test(email)) {
+          e.target.setCustomValidity("請輸入有效的電子郵件地址");
+        } else {
+          e.target.setCustomValidity("");
+        }
+      });
     </script>
 
     <!-- 原有的 order.js -->
