@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>小跑豬專業版傢俱試算器</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="stylesheet" href="style.css" />
     <style>
       .remote-area-notice {
@@ -89,12 +90,70 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="user-actions">
-        <a href="/member-center.html" target="_blank" class="member-link">
-          <div style="text-align: center; padding: 10px 0">會員中心</div>
+    <div class="calculator-container">
+      <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+      <!-- 快速服務入口 -->
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 15px;
+          margin: 20px 0;
+        "
+      >
+        <a
+          href="#calculator"
+          style="
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s;
+          "
+        >
+          <div style="font-size: 36px">🧮</div>
+          <div style="font-weight: bold; margin: 10px 0">運費計算</div>
+        </a>
+
+        <a
+          href="/parcel-public"
+          style="
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s;
+          "
+        >
+          <div style="font-size: 36px">📦</div>
+          <div style="font-weight: bold; margin: 10px 0">包裹預報</div>
+        </a>
+
+        <a
+          href="/customer.html"
+          style="
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s;
+          "
+        >
+          <div style="font-size: 36px">👤</div>
+          <div style="font-weight: bold; margin: 10px 0">會員中心</div>
         </a>
       </div>
+
       <h1>小跑豬專業版傢俱試算器</h1>
 
       <div class="usage-counter">
@@ -450,14 +509,14 @@
           <optgroup label="📍 東部地區">
             <option value="7000" style="color: #dc3545">宜蘭：南澳</option>
             <option value="7000" style="color: #dc3545">宜蘭：釣魚臺</option>
-            <option value="4500">
-              宜蘭其他地區 (NT$4,500/方起，請向客服詢問報價)
+            <option value="4500" style="color: #ff6b6b">
+              ⚠️ 宜蘭其他地區 (NT$4,500/方起，詳情請詢問客服)
             </option>
-            <option value="4500">
-              花蓮全區 (NT$4,500/方起，請向客服詢問報價)
+            <option value="4500" style="color: #ff6b6b">
+              ⚠️ 花蓮全區 (NT$4,500/方起，詳情請詢問客服)
             </option>
-            <option value="4500">
-              台東全區 (NT$4,500/方起，請向客服詢問報價)
+            <option value="4500" style="color: #ff6b6b">
+              ⚠️ 台東全區 (NT$4,500/方起，詳情請詢問客服)
             </option>
           </optgroup>
         </select>
@@ -485,6 +544,107 @@
       <div class="admin-login-link">
         <a href="/login.html" target="_blank">管理者登入</a>
       </div>
+
+      <!-- 公司資訊頁尾 -->
+      <footer
+        style="
+          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+          color: white;
+          padding: 30px;
+          margin-top: 50px;
+          border-radius: 15px;
+          text-align: center;
+          box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+        "
+      >
+        <div style="max-width: 600px; margin: 0 auto">
+          <h3
+            style="
+              color: white;
+              margin-bottom: 20px;
+              font-size: 24px;
+              border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+              padding-bottom: 10px;
+            "
+          >
+            公司資訊
+          </h3>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+              gap: 20px;
+              text-align: left;
+              margin-bottom: 20px;
+            "
+          >
+            <div>
+              <p style="margin: 8px 0">
+                <strong style="color: #3498db">公司名稱：</strong><br />
+                <span style="font-size: 18px">兩隻老虎國際貿易有限公司</span>
+              </p>
+              <p style="margin: 8px 0">
+                <strong style="color: #3498db">統一編號：</strong><br />
+                <span style="font-size: 18px">60660304</span>
+              </p>
+            </div>
+
+            <div>
+              <p style="margin: 8px 0">
+                <strong style="color: #3498db">電子郵件：</strong><br />
+                <a
+                  href="mailto:2runtigers@gmail.com"
+                  style="
+                    color: white;
+                    text-decoration: none;
+                    font-size: 18px;
+                    transition: color 0.3s;
+                  "
+                  onmouseover="this.style.color='#3498db'"
+                  onmouseout="this.style.color='white'"
+                >
+                  2runtigers@gmail.com
+                </a>
+              </p>
+              <p style="margin: 8px 0">
+                <strong style="color: #3498db">LINE 客服：</strong><br />
+                <a
+                  href="https://lin.ee/eK6HptX"
+                  target="_blank"
+                  style="
+                    color: white;
+                    text-decoration: none;
+                    font-size: 18px;
+                    transition: color 0.3s;
+                  "
+                  onmouseover="this.style.color='#00c300'"
+                  onmouseout="this.style.color='white'"
+                >
+                  @xiaopiaozhu
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <div
+            style="
+              border-top: 1px solid rgba(255, 255, 255, 0.3);
+              padding-top: 15px;
+              margin-top: 20px;
+              font-size: 14px;
+              color: rgba(255, 255, 255, 0.8);
+            "
+          >
+            <p style="margin: 5px 0">
+              © 2024 兩隻老虎國際貿易有限公司 版權所有
+            </p>
+            <p style="margin: 5px 0">
+              Two Running Tigers International Trading Co., Ltd.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
 
     <a
@@ -498,7 +658,7 @@
 
     <script src="script.js"></script>
 
-    <!-- 新增的偏遠地區相關 JavaScript -->
+    <!-- 偏遠地區相關 JavaScript -->
     <script>
       // 偏遠地區資料庫
       const remoteAreas = {
@@ -617,8 +777,12 @@
           "甲仙",
           "六龜",
           "屏東縣",
+          "屏東縣全區",
+          "宜蘭其他地區",
           "花蓮",
+          "花蓮全區",
           "台東",
+          "台東全區",
         ],
         5000: ["阿里山", "梅山鄉", "番路", "中埔鄉", "大埔鄉"],
         7000: [
@@ -666,31 +830,51 @@
           } else if (this.value) {
             // 偏遠地區
             remoteAreaInfo.style.display = "block";
-            remoteAreaInfo.style.backgroundColor = "#fff3cd";
-            remoteAreaInfo.style.borderLeft = "4px solid #ffc107";
 
             // 取得選擇的地區名稱
             const areaText = selectedOption.textContent
-              .replace(/[⛰️🏝️🏖️⚠️]/g, "")
+              .replace(/[⛰️🏝️🏖️⚠️✅]/g, "")
               .trim();
+            const feeValue = parseInt(this.value);
 
             selectedAreaName.textContent = areaText;
-            selectedAreaName.style.color = "#856404";
-            selectedAreaFee.textContent = `NT$ ${parseInt(
-              this.value
-            ).toLocaleString()} /方起`;
-            selectedAreaFee.style.color = "#e74c3c";
+            selectedAreaFee.textContent = `NT$ ${feeValue.toLocaleString()} /方起`;
 
-            // 特別提醒高費用地區
-            if (parseInt(this.value) >= 5000) {
+            // 檢查是否為需要客服確認的東部地區
+            const isEasternAreaNeedService =
+              feeValue === 4500 &&
+              (areaText.includes("宜蘭其他地區") ||
+                areaText.includes("花蓮全區") ||
+                areaText.includes("台東全區"));
+
+            if (isEasternAreaNeedService) {
+              // 東部地區特殊處理
+              remoteAreaInfo.style.backgroundColor = "#fff3cd";
+              remoteAreaInfo.style.borderLeft = "4px solid #ff9800";
+              selectedAreaName.style.color = "#ff6b6b";
+              selectedAreaFee.innerHTML = `NT$ ${feeValue.toLocaleString()} /方起 <small style="color: #ff9800;">(詳情請詢問客服)</small>`;
+              selectedAreaFee.style.color = "#e74c3c";
+            } else if (feeValue >= 5000) {
+              // 特別偏遠地區
               remoteAreaInfo.style.backgroundColor = "#f8d7da";
               remoteAreaInfo.style.borderLeft = "4px solid #dc3545";
               selectedAreaName.style.color = "#721c24";
-
-              // 加入警告圖示
-              selectedAreaFee.innerHTML = `⚠️ NT$ ${parseInt(
-                this.value
-              ).toLocaleString()} /方起 (特別偏遠地區)`;
+              selectedAreaFee.style.color = "#dc3545";
+              selectedAreaFee.innerHTML = `⚠️ NT$ ${feeValue.toLocaleString()} /方起 ${
+                feeValue >= 7000 ? "(特別偏遠地區)" : ""
+              }`;
+            } else if (feeValue >= 3000) {
+              // 中度偏遠地區
+              remoteAreaInfo.style.backgroundColor = "#fff3cd";
+              remoteAreaInfo.style.borderLeft = "4px solid #ffc107";
+              selectedAreaName.style.color = "#856404";
+              selectedAreaFee.style.color = "#e74c3c";
+            } else {
+              // 一般偏遠地區
+              remoteAreaInfo.style.backgroundColor = "#fff3cd";
+              remoteAreaInfo.style.borderLeft = "4px solid #ffc107";
+              selectedAreaName.style.color = "#856404";
+              selectedAreaFee.style.color = "#e74c3c";
             }
           } else {
             remoteAreaInfo.style.display = "none";
