@@ -6,35 +6,36 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"  // 使用 PostgreSQL
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 // ===== 員工/管理者資料模型 =====
 model User {
   id            String    @id @default(cuid())
-  username      String    @unique // 員工登入帳號，不可重複
-  passwordHash  String    // 加密後的密碼
-  role          String    @default("OPERATOR") // 角色：OPERATOR, ADMIN, SUPER_ADMIN
+  username      String    @unique
+  passwordHash  String
+  role          String    @default("OPERATOR") // OPERATOR, ADMIN, SUPER_ADMIN
   
-  // 員工資訊（全部設為可選，避免遷移問題）
-  fullName      String?   // 員工全名
-  email         String?   // 員工電子郵件
-  phone         String?   // 員工聯絡電話
-  department    String?   // 部門
-  isActive      Boolean   @default(true) // 帳號是否啟用
+  // 員工資訊
+  fullName      String?
+  email         String?
+  phone         String?
+  department    String?
+  isActive      Boolean   @default(true)
   
-  // 登入與安全（全部可選或有預設值）
-  lastLoginAt   DateTime? // 最後登入時間
-  loginAttempts Int       @default(0) // 登入失敗次數
-  lockedUntil   DateTime? // 帳號鎖定到期時間
+  // 登入與安全
+  lastLoginAt   DateTime?
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
   
-  // 時間戳記（重要：加入預設值避免遷移錯誤）
+  // 時間戳記
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt  // 加入預設值
+  updatedAt     DateTime  @default(now()) @updatedAt
   
   // 關聯
-  assignedOrders ShipmentOrder[] @relation("AssignedOrders")
+  assignedOrders      ShipmentOrder[]      @relation("AssignedOrders")
+  operationLogs       OrderOperationLog[]  @relation("UserOperations")  // 新增
 
   @@index([username])
   @@index([role])
@@ -45,51 +46,51 @@ model User {
 // ===== 客戶會員資料模型 =====
 model Customer {
   id              String    @id @default(cuid())
-  email           String    @unique // 會員電子郵件，用於登入
-  passwordHash    String    // 加密後的密碼
+  email           String    @unique
+  passwordHash    String
   
   // 基本資料
-  name            String    // 會員姓名
-  phone           String?   // 聯絡電話
-  lineNickname    String?   // LINE 暱稱
-  defaultAddress  String?   // 預設地址
-  idNumber        String?   // 身分證字號
-  taxId           String?   // 統一編號
+  name            String
+  phone           String?
+  lineNickname    String?
+  defaultAddress  String?
+  idNumber        String?
+  taxId           String?
   
-  // 會員狀態與安全（全部有預設值）
-  isActive        Boolean   @default(true) // 帳號狀態
-  emailVerified   Boolean   @default(false) // 電子郵件是否已驗證
-  phoneVerified   Boolean   @default(false) // 電話是否已驗證
+  // 會員狀態與安全
+  isActive        Boolean   @default(true)
+  emailVerified   Boolean   @default(false)
+  phoneVerified   Boolean   @default(false)
   
-  // 密碼管理（全部可選或有預設值）
-  needPasswordChange Boolean @default(false) // 是否需要修改密碼
-  passwordResetAt    DateTime? // 最後密碼重設時間
-  passwordResetToken String?   // 密碼重設令牌
-  passwordResetExpiry DateTime? // 密碼重設令牌到期時間
+  // 密碼管理
+  needPasswordChange Boolean @default(false)
+  passwordResetAt    DateTime?
+  passwordResetToken String?
+  passwordResetExpiry DateTime?
   
-  // 會員等級與積分（全部有預設值）
+  // 會員等級與積分
   memberLevel     String    @default("BASIC") // BASIC, SILVER, GOLD, PLATINUM
-  points          Int       @default(0) // 會員積分
-  totalSpent      Float     @default(0) // 總消費金額
+  points          Int       @default(0)
+  totalSpent      Float     @default(0)
   
-  // 登入記錄（全部可選或有預設值）
-  lastLoginAt     DateTime? // 最後登入時間
-  loginCount      Int       @default(0) // 登入次數
-  loginAttempts   Int       @default(0) // 登入失敗次數
-  lockedUntil     DateTime? // 帳號鎖定到期時間
+  // 登入記錄
+  lastLoginAt     DateTime?
+  loginCount      Int       @default(0)
+  loginAttempts   Int       @default(0)
+  lockedUntil     DateTime?
   
-  // 偏好設定（全部可選或有預設值）
-  preferences     String?   // JSON 字串儲存用戶偏好設定
-  newsletter      Boolean   @default(true) // 是否訂閱電子報
-  smsNotification Boolean   @default(true) // 是否接收簡訊通知
+  // 偏好設定
+  preferences     String?
+  newsletter      Boolean   @default(true)
+  smsNotification Boolean   @default(true)
   
   // 備註
-  internalNote    String?   // 內部備註（只有管理員可見）
+  internalNote    String?
   
   // 時間戳記
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt  // 加入預設值
-  deletedAt       DateTime? // 軟刪除時間
+  updatedAt       DateTime  @default(now()) @updatedAt
+  deletedAt       DateTime?
   
   // 關聯
   orders              ShipmentOrder[]       @relation("CustomerOrders")
@@ -103,65 +104,97 @@ model Customer {
   @@map("customers")
 }
 
-// ===== 訂單資料模型 =====
+// ===== 訂單資料模型（增強版）=====
 model ShipmentOrder {
   id                String    @id @default(cuid())
   
   // 收件人資訊
-  recipientName     String    // 收件人姓名
-  address           String    // 收件地址
-  phone             String    // 收件電話
-  email             String    @default("pending@example.com") // 電子郵件（電子發票用）
-  lineNickname      String?   // LINE 暱稱
+  recipientName     String
+  address           String
+  phone             String
+  email             String    @default("pending@example.com")
+  lineNickname      String?
   
   // 證件與稅務
-  idNumber          String?   // 身分證字號
-  taxId             String?   // 統一編號
+  idNumber          String?
+  taxId             String?
   
   // 訂單內容
-  calculationResult String    // JSON 字串儲存計算結果
-  totalAmount       Float?    // 訂單總金額
-  currency          String    @default("TWD") // 貨幣類型
+  calculationResult String    // 原始計算結果
+  totalAmount       Float?
+  currency          String    @default("TWD")
   
   // 訂單狀態
-  status            String    @default("NEEDS_PURCHASE") 
-  // 狀態值：NEEDS_PURCHASE, PURCHASED, IN_WAREHOUSE, NOT_IN_WAREHOUSE, 
-  //        SHIPPED, IN_CUSTOMS, DELIVERY_COMPLETE, CANCELLED
+  status            String    @default("NEEDS_PURCHASE")
   
-  // 加值服務（全部可選或有預設值）
-  additionalServices String?  // JSON 字串儲存加值服務資訊
-  serviceQuoted      Boolean  @default(false) // 是否已報價加值服務
-  serviceQuoteAmount Float?   // 加值服務報價金額
-  serviceCompleted   Boolean  @default(false) // 加值服務是否完成
+  // 加值服務
+  additionalServices String?
+  serviceQuoted      Boolean  @default(false)
+  serviceQuoteAmount Float?
+  serviceCompleted   Boolean  @default(false)
   
-  // 物流資訊（全部可選）
-  trackingNumber    String?   // 物流追蹤號碼
-  shippingMethod    String?   // 運送方式
-  estimatedDelivery DateTime? // 預計送達時間
-  actualDelivery    DateTime? // 實際送達時間
+  // ===== 新增：包裹轉訂單相關欄位 =====
+  // 來源包裹
+  sourceParcelId    String?   @unique
+  sourceParcel      ParcelNotification? @relation("ParcelToOrder", fields: [sourceParcelId], references: [id])
   
-  // 付款資訊（全部可選或有預設值）
-  paymentStatus     String    @default("PENDING") // PENDING, PAID, FAILED, REFUNDED
-  paymentMethod     String?   // 付款方式
-  paidAt            DateTime? // 付款時間
-  invoiceNumber     String?   // 發票號碼
+  // 實際入庫測量資料
+  actualWeight      Float?    // 實際重量（公斤）
+  actualLength      Float?    // 實際長度（公分）
+  actualWidth       Float?    // 實際寬度（公分）
+  actualHeight      Float?    // 實際高度（公分）
+  actualCbm         Float?    // 實際材積
   
-  // 備註（全部可選）
-  customerNote      String?   // 客戶備註
-  adminNote         String?   // 管理員備註
-  internalNote      String?   // 內部備註
+  // 加強保護服務
+  protectionNeeded  Boolean   @default(false)
+  protectionPrice   Float?    // 加強保護費用
+  protectionNote    String?   // 加強保護說明
+  
+  // 調整後的最終報價
+  finalQuoteData    String?   // JSON：包含所有費用明細
+  finalTotalAmount  Float?    // 最終總金額
+  quoteNote         String?   // 報價備註說明
+  quoteValidUntil   DateTime? // 報價有效期限
+  
+  // 分享功能
+  shareToken        String?   @unique @default(cuid())
+  shareCreatedAt    DateTime? // 分享連結建立時間
+  shareViewCount    Int       @default(0)
+  shareLastViewedAt DateTime? // 最後查看時間
+  
+  // ===== 結束新增區塊 =====
+  
+  // 物流資訊
+  trackingNumber    String?
+  shippingMethod    String?
+  estimatedDelivery DateTime?
+  actualDelivery    DateTime?
+  
+  // 付款資訊
+  paymentStatus     String    @default("PENDING")
+  paymentMethod     String?
+  paidAt            DateTime?
+  invoiceNumber     String?
+  
+  // 備註
+  customerNote      String?
+  adminNote         String?
+  internalNote      String?
   
   // 時間戳記
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @default(now()) @updatedAt  // 加入預設值
-  completedAt       DateTime? // 訂單完成時間
-  cancelledAt       DateTime? // 訂單取消時間
+  updatedAt         DateTime  @default(now()) @updatedAt
+  completedAt       DateTime?
+  cancelledAt       DateTime?
   
   // 關聯
   assignedToId      String?
   assignedTo        User?     @relation("AssignedOrders", fields: [assignedToId], references: [id])
   customerId        String?
   customer          Customer? @relation("CustomerOrders", fields: [customerId], references: [id])
+  
+  // 新增：操作記錄關聯
+  operationLogs     OrderOperationLog[] @relation("OrderOperations")
 
   @@index([customerId])
   @@index([email])
@@ -169,85 +202,97 @@ model ShipmentOrder {
   @@index([paymentStatus])
   @@index([createdAt])
   @@index([trackingNumber])
+  @@index([shareToken])        // 新增索引
+  @@index([sourceParcelId])     // 新增索引
   @@map("shipment_orders")
 }
 
 // ===== 估價單資料模型 =====
 model CalculationQuote {
   id                String    @id @default(cuid())
-  calculationResult String    // JSON 字串儲存計算結果
+  calculationResult String
   
-  // 追蹤資訊（全部可選或有預設值）
-  ipAddress         String?   // 建立者 IP
-  userAgent         String?   // 建立者瀏覽器資訊
-  referrer          String?   // 來源網址
+  // 追蹤資訊
+  ipAddress         String?
+  userAgent         String?
+  referrer          String?
   
-  // 分享資訊（全部有預設值）
-  shareCount        Int       @default(0) // 分享次數
-  viewCount         Int       @default(0) // 查看次數
-  lastViewedAt      DateTime? // 最後查看時間
+  // 分享資訊
+  shareCount        Int       @default(0)
+  viewCount         Int       @default(0)
+  lastViewedAt      DateTime?
   
-  // 轉換追蹤（有預設值）
-  convertedToOrder  Boolean   @default(false) // 是否已轉換為訂單
-  orderId           String?   // 關聯的訂單 ID
+  // 轉換追蹤
+  convertedToOrder  Boolean   @default(false)
+  orderId           String?
   
   // 時間戳記
   createdAt         DateTime  @default(now())
-  expiresAt         DateTime? // 估價單到期時間
+  expiresAt         DateTime?
 
   @@index([createdAt])
   @@index([convertedToOrder])
   @@map("calculation_quotes")
 }
 
-// ===== 包裹預報資料模型 =====
+// ===== 包裹預報資料模型（增強版）=====
 model ParcelNotification {
   id                String    @id @default(cuid())
   
   // 包裹資訊
-  trackingNumber    String    // 物流單號
-  logisticsCompany  String?   // 物流公司
-  productName       String    // 商品名稱
-  productLink       String?   // 商品連結
-  productImages     String    @default("[]") // JSON array of image URLs
-  quantity          Int       @default(1) // 數量
-  weight            Float?    // 重量（公斤）
-  value             Float?    // 申報價值
+  trackingNumber    String
+  logisticsCompany  String?
+  productName       String
+  productLink       String?
+  productImages     String    @default("[]")
+  quantity          Int       @default(1)
+  weight            Float?
+  value             Float?
   
   // 狀態
-  status            String    @default("PENDING") 
-  // 狀態值：PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
+  status            String    @default("PENDING")
   
-  // 台灣收件資料（全部可選）
-  taiwanDelivery    String?   // JSON 字串儲存台灣收件資料
-  taiwanTracking    String?   // 台灣段物流單號
+  // ===== 新增：訂單轉換相關 =====
+  // 轉換狀態
+  isConverted       Boolean   @default(false)  // 是否已轉換為訂單
+  convertedAt       DateTime? // 轉換時間
+  convertedBy       String?   // 轉換操作員 ID
+  
+  // 關聯到正式訂單（反向關聯）
+  convertedOrder    ShipmentOrder? @relation("ParcelToOrder")
+  
+  // ===== 結束新增區塊 =====
+  
+  // 台灣收件資料
+  taiwanDelivery    String?
+  taiwanTracking    String?
   
   // 會員關聯
   customerId        String?
   customer          Customer? @relation("CustomerParcels", fields: [customerId], references: [id])
   
-  // 非會員資訊（全部可選）
-  guestEmail        String?   // 非會員的電子郵件
-  guestPhone        String?   // 非會員的電話
-  guestName         String?   // 非會員的姓名
-  queryCode         String?   @unique // 非會員查詢碼
+  // 非會員資訊
+  guestEmail        String?
+  guestPhone        String?
+  guestName         String?
+  queryCode         String?   @unique
   
-  // 備註（全部可選）
-  note              String?   // 客戶備註
-  adminNote         String?   // 管理員備註
-  internalNote      String?   // 內部備註
+  // 備註
+  note              String?
+  adminNote         String?
+  internalNote      String?
   
-  // 處理記錄（全部可選）
-  processedBy       String?   // 處理人員 ID
-  processedAt       DateTime? // 處理時間
+  // 處理記錄
+  processedBy       String?
+  processedAt       DateTime?
   
   // 時間戳記
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @default(now()) @updatedAt  // 加入預設值
-  confirmedAt       DateTime? // 確認時間
-  arrivedAt         DateTime? // 到倉時間
-  completedAt       DateTime? // 完成時間
-  cancelledAt       DateTime? // 取消時間
+  updatedAt         DateTime  @default(now()) @updatedAt
+  confirmedAt       DateTime?
+  arrivedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
   
   @@index([customerId])
   @@index([trackingNumber])
@@ -255,5 +300,37 @@ model ParcelNotification {
   @@index([guestEmail])
   @@index([queryCode])
   @@index([createdAt])
+  @@index([isConverted])      // 新增索引
   @@map("parcel_notifications")
+}
+
+// ===== 新增：訂單操作記錄表 =====
+model OrderOperationLog {
+  id              String    @id @default(cuid())
+  
+  // 關聯
+  orderId         String
+  order           ShipmentOrder @relation("OrderOperations", fields: [orderId], references: [id])
+  operatorId      String
+  operator        User @relation("UserOperations", fields: [operatorId], references: [id])
+  
+  // 操作資訊
+  action          String    // CONVERT_FROM_PARCEL, UPDATE_DIMENSION, UPDATE_PRICE, UPDATE_PROTECTION, GENERATE_SHARE, UPDATE_STATUS
+  previousValue   String?   // JSON：操作前的值
+  newValue        String?   // JSON：操作後的值
+  details         String?   // JSON：額外詳情
+  note            String?   // 操作備註
+  
+  // 客戶端資訊
+  ipAddress       String?   // 操作者 IP
+  userAgent       String?   // 操作者瀏覽器
+  
+  // 時間戳記
+  createdAt       DateTime  @default(now())
+  
+  @@index([orderId])
+  @@index([operatorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("order_operation_logs")
 }

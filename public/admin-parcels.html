@@ -61,6 +61,14 @@
         color: #00cec9;
       }
 
+      .stat-card.convertible p {
+        color: #f39c12;
+      }
+
+      .stat-card.converted p {
+        color: #8e44ad;
+      }
+
       /* 篩選器區域 */
       .filters {
         display: flex;
@@ -136,6 +144,14 @@
         background-color: #f8f9fa;
       }
 
+      .parcel-table tbody tr.converted-row {
+        background-color: #f4f0ff;
+      }
+
+      .parcel-table tbody tr.converted-row:hover {
+        background-color: #ebe4ff;
+      }
+
       .parcel-table tbody tr:last-child td {
         border-bottom: none;
       }
@@ -199,10 +215,47 @@
         cursor: pointer;
         font-size: 14px;
         transition: background-color 0.3s;
+        margin-right: 5px;
       }
 
       .btn-view:hover {
         background-color: #2980b9;
+      }
+
+      .btn-convert {
+        padding: 6px 12px;
+        background-color: #f39c12;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+      }
+
+      .btn-convert:hover {
+        background-color: #e67e22;
+      }
+
+      .btn-convert:disabled {
+        background-color: #95a5a6;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .btn-share {
+        padding: 6px 12px;
+        background-color: #27ae60;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+      }
+
+      .btn-share:hover {
+        background-color: #229954;
       }
 
       /* 訪客標籤 */
@@ -210,6 +263,17 @@
         display: inline-block;
         padding: 2px 8px;
         background-color: #ff7675;
+        color: white;
+        border-radius: 12px;
+        font-size: 11px;
+        margin-left: 5px;
+        font-weight: 500;
+      }
+
+      .converted-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background-color: #8e44ad;
         color: white;
         border-radius: 12px;
         font-size: 11px;
@@ -315,7 +379,7 @@
         min-width: 120px;
       }
 
-      /* 圖片展示 - 修復版本 */
+      /* 圖片展示 */
       .parcel-images {
         display: flex;
         gap: 10px;
@@ -369,6 +433,93 @@
 
       .btn-update-note:hover {
         background-color: #1558b8;
+      }
+
+      /* 轉換區塊 */
+      .convert-section {
+        background-color: #fff8e1;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+      }
+
+      .convert-section h3 {
+        color: #f39c12;
+        margin-top: 0;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .btn-action {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+        flex: 1;
+      }
+
+      .btn-convert-now {
+        background-color: #f39c12;
+        color: white;
+      }
+
+      .btn-convert-now:hover {
+        background-color: #e67e22;
+      }
+
+      .btn-view-order {
+        background-color: #27ae60;
+        color: white;
+      }
+
+      .btn-view-order:hover {
+        background-color: #229954;
+      }
+
+      /* 分享連結區塊 */
+      .share-section {
+        background-color: #e8f5e9;
+        border: 1px solid #4caf50;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+      }
+
+      .share-link-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .share-link-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        background-color: #f5f5f5;
+      }
+
+      .btn-copy {
+        padding: 10px 20px;
+        background-color: #27ae60;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+      }
+
+      .btn-copy:hover {
+        background-color: #229954;
       }
 
       /* 頂部操作區 */
@@ -426,6 +577,31 @@
         margin-bottom: 20px;
       }
 
+      /* 成功訊息 */
+      .success-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #2ecc71;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        z-index: 9999;
+        animation: slideInRight 0.3s;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
       /* 響應式設計 */
       @media (max-width: 768px) {
         .stats-container {
@@ -467,6 +643,10 @@
 
         .header-actions button {
           flex: 1;
+        }
+
+        .action-buttons {
+          flex-direction: column;
         }
       }
 
@@ -516,6 +696,14 @@
           <h3>已完成</h3>
           <p id="stats-completed">0</p>
         </div>
+        <div class="stat-card convertible">
+          <h3>可轉換</h3>
+          <p id="stats-convertible">0</p>
+        </div>
+        <div class="stat-card converted">
+          <h3>已轉換</h3>
+          <p id="stats-converted">0</p>
+        </div>
       </div>
 
       <!-- 篩選器 -->
@@ -532,6 +720,12 @@
           <option value="">所有類型</option>
           <option value="member">會員包裹</option>
           <option value="guest">訪客包裹</option>
+        </select>
+        <select id="filter-convert">
+          <option value="">轉換狀態</option>
+          <option value="convertible">可轉換</option>
+          <option value="converted">已轉換</option>
+          <option value="not-converted">未轉換</option>
         </select>
         <input
           type="text"
@@ -597,6 +791,7 @@
       const parcelsTableBody = document.getElementById("parcelsTableBody");
       const filterStatus = document.getElementById("filter-status");
       const filterType = document.getElementById("filter-type");
+      const filterConvert = document.getElementById("filter-convert");
       const searchInput = document.getElementById("search-input");
       const modal = document.getElementById("parcel-detail-modal");
       const modalBody = document.getElementById("modal-body");
@@ -620,6 +815,7 @@
 
       filterStatus.addEventListener("change", fetchParcels);
       filterType.addEventListener("change", fetchParcels);
+      filterConvert.addEventListener("change", fetchParcels);
       searchInput.addEventListener("input", debounce(fetchParcels, 300));
 
       // Debounce function for search input
@@ -633,6 +829,15 @@
           clearTimeout(timeout);
           timeout = setTimeout(later, wait);
         };
+      }
+
+      // 顯示成功訊息
+      function showSuccessMessage(message) {
+        const successMsg = document.createElement("div");
+        successMsg.className = "success-message";
+        successMsg.textContent = message;
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 3000);
       }
 
       // 載入統計資料
@@ -651,6 +856,10 @@
               stats.arrivedParcels || 0;
             document.getElementById("stats-completed").textContent =
               stats.completedParcels || 0;
+            document.getElementById("stats-convertible").textContent =
+              stats.convertibleParcels || 0;
+            document.getElementById("stats-converted").textContent =
+              stats.convertedParcels || 0;
           }
         } catch (error) {
           console.error("載入統計失敗:", error);
@@ -690,7 +899,20 @@
 
           if (response.ok) {
             allParcels = await response.json();
-            renderParcels(allParcels);
+
+            // 根據轉換狀態篩選
+            let filteredParcels = allParcels;
+            if (filterConvert.value === "convertible") {
+              filteredParcels = allParcels.filter((p) => p.canConvert);
+            } else if (filterConvert.value === "converted") {
+              filteredParcels = allParcels.filter((p) => p.isConverted);
+            } else if (filterConvert.value === "not-converted") {
+              filteredParcels = allParcels.filter(
+                (p) => !p.isConverted && !p.canConvert
+              );
+            }
+
+            renderParcels(filteredParcels);
           } else if (response.status === 401) {
             localStorage.removeItem("authToken");
             window.location.href = "/login.html";
@@ -768,14 +990,26 @@
               customerInfo = '<span style="color: #999;">無客戶資訊</span>';
             }
 
+            // 操作按鈕
+            let actionButtons = `<button class="btn-view" data-parcel-id="${parcel.id}">查看</button>`;
+
+            if (parcel.canConvert) {
+              actionButtons += `<button class="btn-convert" data-parcel-id="${parcel.id}">轉訂單</button>`;
+            } else if (parcel.convertedOrder) {
+              actionButtons += `<button class="btn-share" data-order-id="${parcel.convertedOrder.id}" data-share-token="${parcel.convertedOrder.shareToken}">分享</button>`;
+            }
+
             return `
-              <tr>
+              <tr class="${parcel.isConverted ? "converted-row" : ""}">
+                <td>${actionButtons}</td>
                 <td>
-                  <button class="btn-view" data-parcel-id="${
-                    parcel.id
-                  }">查看</button>
+                  ${new Date(parcel.createdAt).toLocaleString("zh-TW")}
+                  ${
+                    parcel.isConverted
+                      ? '<span class="converted-badge">已轉換</span>'
+                      : ""
+                  }
                 </td>
-                <td>${new Date(parcel.createdAt).toLocaleString("zh-TW")}</td>
                 <td>${customerInfo}</td>
                 <td>
                   <strong>${parcel.trackingNumber}</strong>
@@ -786,7 +1020,9 @@
                 <td>${parcel.productName}</td>
                 <td style="text-align: center;">${parcel.quantity}</td>
                 <td>
-                  <select class="status-select" data-parcel-id="${parcel.id}">
+                  <select class="status-select" data-parcel-id="${parcel.id}" ${
+              parcel.isConverted ? "disabled" : ""
+            }>
                     <option value="PENDING" ${
                       parcel.status === "PENDING" ? "selected" : ""
                     }>待確認</option>
@@ -820,6 +1056,22 @@
           });
         });
 
+        document.querySelectorAll(".btn-convert").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            const parcelId = e.target.dataset.parcelId;
+            if (confirm("確定要將此包裹轉換為正式訂單嗎？")) {
+              await convertToOrder(parcelId);
+            }
+          });
+        });
+
+        document.querySelectorAll(".btn-share").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            const shareToken = e.target.dataset.shareToken;
+            showShareLink(shareToken);
+          });
+        });
+
         document.querySelectorAll(".status-select").forEach((select) => {
           select.addEventListener("change", async (e) => {
             const parcelId = e.target.dataset.parcelId;
@@ -840,24 +1092,18 @@
 
       // 修復圖片路徑的輔助函數
       function getFullImageUrl(imagePath) {
-        // 如果已經是完整的 URL，直接返回
         if (
           imagePath.startsWith("http://") ||
           imagePath.startsWith("https://")
         ) {
           return imagePath;
         }
-
-        // 如果是相對路徑，加上當前網站的域名
         const baseUrl = window.location.origin;
-
-        // 確保路徑以 / 開頭
         const path = imagePath.startsWith("/") ? imagePath : "/" + imagePath;
-
         return baseUrl + path;
       }
 
-      // 顯示包裹詳情 - 修復版本
+      // 顯示包裹詳情
       function showParcelDetail(parcelId) {
         const parcel = allParcels.find((p) => p.id === parcelId);
         if (!parcel) return;
@@ -892,6 +1138,45 @@
             <p><strong>姓名：</strong>${parcel.customer.name}</p>
             <p><strong>電子郵件：</strong>${parcel.customer.email}</p>
             <p><strong>電話：</strong>${parcel.customer.phone || "-"}</p>
+          `;
+        }
+
+        // 轉換區塊
+        let convertSection = "";
+        if (parcel.canConvert) {
+          convertSection = `
+            <div class="convert-section">
+              <h3>轉換為正式訂單</h3>
+              <p>此包裹已到倉，可以轉換為正式訂單進行報價。</p>
+              <div class="action-buttons">
+                <button class="btn-action btn-convert-now" onclick="convertToOrder('${parcelId}')">
+                  立即轉換
+                </button>
+              </div>
+            </div>
+          `;
+        } else if (parcel.convertedOrder) {
+          convertSection = `
+            <div class="share-section">
+              <h3>訂單分享</h3>
+              <p>此包裹已轉換為訂單，訂單編號：${parcel.convertedOrder.id.substring(
+                0,
+                8
+              )}...</p>
+              <div class="share-link-container">
+                <input type="text" class="share-link-input" id="share-link-${parcelId}" 
+                  value="${window.location.origin}/order-share/${
+            parcel.convertedOrder.shareToken
+          }" readonly>
+                <button class="btn-copy" onclick="copyShareLink('${parcelId}')">複製連結</button>
+              </div>
+              <div class="action-buttons" style="margin-top: 10px;">
+                <button class="btn-action btn-view-order" 
+                  onclick="window.open('/admin-parcel-convert/${parcelId}', '_blank')">
+                  查看訂單詳情
+                </button>
+              </div>
+            </div>
           `;
         }
 
@@ -933,6 +1218,13 @@
                   ).toLocaleString("zh-TW")}</p>`
                 : ""
             }
+            ${
+              parcel.isConverted
+                ? `<p><strong>轉換時間：</strong>${new Date(
+                    parcel.convertedAt
+                  ).toLocaleString("zh-TW")}</p>`
+                : ""
+            }
             
             ${
               parcel.productImages && parcel.productImages.length > 0
@@ -941,7 +1233,6 @@
                 <div class="parcel-images">
                   ${parcel.productImages
                     .map((img) => {
-                      // 使用修復後的完整 URL
                       const fullUrl = getFullImageUrl(img);
                       return `<img src="${fullUrl}" alt="商品圖片" onclick="window.open('${fullUrl}', '_blank')" title="點擊查看大圖">`;
                     })
@@ -951,15 +1242,55 @@
                 : ""
             }
             
+            ${convertSection}
+            
             <h3>更新管理員備註</h3>
-            <textarea id="admin-note-input" placeholder="輸入管理員備註...">${
-              parcel.adminNote || ""
-            }</textarea>
-            <button onclick="updateAdminNote('${parcelId}')" class="btn-update-note">更新備註</button>
+            <textarea id="admin-note-input" placeholder="輸入管理員備註..." ${
+              parcel.isConverted ? "disabled" : ""
+            }>${parcel.adminNote || ""}</textarea>
+            <button onclick="updateAdminNote('${parcelId}')" class="btn-update-note" ${
+          parcel.isConverted ? "disabled" : ""
+        }>
+              更新備註
+            </button>
           </div>
         `;
 
         modal.style.display = "block";
+      }
+
+      // 轉換為訂單
+      async function convertToOrder(parcelId) {
+        try {
+          // 跳轉到轉換頁面
+          window.location.href = `/admin-parcel-convert/${parcelId}`;
+        } catch (error) {
+          console.error("轉換失敗:", error);
+          alert("轉換失敗，請稍後再試");
+        }
+      }
+
+      // 顯示分享連結
+      function showShareLink(shareToken) {
+        const shareUrl = `${window.location.origin}/order-share/${shareToken}`;
+
+        // 創建臨時輸入框
+        const tempInput = document.createElement("input");
+        tempInput.value = shareUrl;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+
+        showSuccessMessage("分享連結已複製到剪貼簿！");
+      }
+
+      // 複製分享連結
+      function copyShareLink(parcelId) {
+        const input = document.getElementById(`share-link-${parcelId}`);
+        input.select();
+        document.execCommand("copy");
+        showSuccessMessage("連結已複製！");
       }
 
       // 更新包裹狀態
@@ -977,11 +1308,10 @@
           if (response.ok) {
             await fetchParcels();
             await loadStats();
-            // 不顯示 alert，改為更自然的反饋
-            console.log("狀態更新成功");
+            showSuccessMessage("狀態更新成功");
           } else {
             alert("狀態更新失敗，請稍後再試");
-            await fetchParcels(); // 重新載入以恢復原狀態
+            await fetchParcels();
           }
         } catch (error) {
           console.error("更新狀態失敗:", error);
@@ -993,6 +1323,12 @@
       // 更新管理員備註
       async function updateAdminNote(parcelId) {
         const adminNote = document.getElementById("admin-note-input").value;
+        const parcel = allParcels.find((p) => p.id === parcelId);
+
+        if (parcel.isConverted) {
+          alert("已轉換的包裹無法修改備註");
+          return;
+        }
 
         try {
           const response = await fetch(
@@ -1001,7 +1337,7 @@
               method: "PUT",
               headers,
               body: JSON.stringify({
-                status: allParcels.find((p) => p.id === parcelId).status,
+                status: parcel.status,
                 adminNote: adminNote,
               }),
             }
@@ -1010,22 +1346,7 @@
           if (response.ok) {
             await fetchParcels();
             modal.style.display = "none";
-            // 顯示成功訊息
-            const successMsg = document.createElement("div");
-            successMsg.textContent = "備註更新成功";
-            successMsg.style.cssText = `
-              position: fixed;
-              top: 20px;
-              right: 20px;
-              background: #2ecc71;
-              color: white;
-              padding: 10px 20px;
-              border-radius: 5px;
-              z-index: 9999;
-              animation: slideIn 0.3s;
-            `;
-            document.body.appendChild(successMsg);
-            setTimeout(() => successMsg.remove(), 3000);
+            showSuccessMessage("備註更新成功");
           } else {
             alert("備註更新失敗");
           }

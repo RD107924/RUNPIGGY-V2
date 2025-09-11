@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>包裹轉訂單 - 管理後台</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      /* 主容器 */
+      .convert-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      /* 頂部標題區 */
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e9ecef;
+      }
+
+      .page-title {
+        color: #1a73e8;
+        font-size: 2em;
+        margin: 0;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .header-actions button {
+        padding: 10px 20px;
+        font-size: 14px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .btn-back {
+        background-color: #7f8c8d;
+        color: white;
+      }
+
+      .btn-back:hover {
+        background-color: #596164;
+      }
+
+      /* 主要內容區 */
+      .main-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      /* 資訊卡片 */
+      .info-card {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .info-card h3 {
+        color: #333;
+        margin-top: 0;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f0f0;
+        font-size: 1.2em;
+      }
+
+      .info-row {
+        display: flex;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+      }
+
+      .info-row:last-child {
+        border-bottom: none;
+      }
+
+      .info-label {
+        color: #666;
+        min-width: 120px;
+        font-weight: 500;
+      }
+
+      .info-value {
+        color: #333;
+        flex: 1;
+      }
+
+      /* 狀態標籤 */
+      .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .status-ARRIVED {
+        background-color: #d6eaf8;
+        color: #0984e3;
+      }
+
+      .status-PENDING {
+        background-color: #fff3cd;
+        color: #d63031;
+      }
+
+      /* 圖片區域 */
+      .product-images {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+      }
+
+      .product-images img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .product-images img:hover {
+        transform: scale(1.05);
+        border-color: #1a73e8;
+      }
+
+      /* 轉換表單 */
+      .conversion-form {
+        background: white;
+        border: 2px solid #1a73e8;
+        border-radius: 8px;
+        padding: 25px;
+        margin-bottom: 20px;
+      }
+
+      .conversion-form h2 {
+        color: #1a73e8;
+        margin-top: 0;
+        margin-bottom: 25px;
+        text-align: center;
+      }
+
+      .form-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .form-section h4 {
+        color: #333;
+        margin-top: 0;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #dee2e6;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group label {
+        color: #555;
+        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .form-group label.required::after {
+        content: " *";
+        color: #e74c3c;
+      }
+
+      .form-control {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+      }
+
+      .form-control:disabled {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+      }
+
+      textarea.form-control {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      /* 加強保護區塊 */
+      .protection-section {
+        background: #fff8e1;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+
+      .protection-checkbox {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .protection-checkbox input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        cursor: pointer;
+      }
+
+      .protection-checkbox label {
+        cursor: pointer;
+        font-weight: 500;
+        color: #333;
+      }
+
+      /* 價格計算區 */
+      .price-summary {
+        background: #e8f5e9;
+        border: 2px solid #4caf50;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .price-summary h4 {
+        color: #2e7d32;
+        margin-top: 0;
+        margin-bottom: 15px;
+      }
+
+      .price-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #c8e6c9;
+      }
+
+      .price-item:last-child {
+        border-bottom: none;
+        padding-top: 15px;
+        margin-top: 10px;
+        border-top: 2px solid #4caf50;
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #1b5e20;
+      }
+
+      .price-label {
+        color: #555;
+      }
+
+      .price-value {
+        color: #2e7d32;
+        font-weight: 500;
+      }
+
+      /* 按鈕區 */
+      .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+      }
+
+      .btn {
+        padding: 12px 30px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 500;
+      }
+
+      .btn-primary {
+        background-color: #1a73e8;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: #1558b8;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-primary:disabled {
+        background-color: #95a5a6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .btn-success {
+        background-color: #27ae60;
+        color: white;
+      }
+
+      .btn-success:hover {
+        background-color: #229954;
+      }
+
+      .btn-secondary {
+        background-color: #7f8c8d;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background-color: #596164;
+      }
+
+      /* 分享區塊 */
+      .share-section {
+        background: #e3f2fd;
+        border: 2px solid #2196f3;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+      }
+
+      .share-section.active {
+        display: block;
+      }
+
+      .share-section h4 {
+        color: #1565c0;
+        margin-top: 0;
+        margin-bottom: 15px;
+      }
+
+      .share-link-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .share-link-input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #90caf9;
+        border-radius: 5px;
+        font-size: 14px;
+        background-color: white;
+      }
+
+      .btn-copy {
+        padding: 10px 20px;
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .btn-copy:hover {
+        background-color: #1976d2;
+      }
+
+      /* 載入動畫 */
+      .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 40px;
+      }
+
+      .loading-spinner.active {
+        display: block;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #1a73e8;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* 訊息提示 */
+      .alert {
+        padding: 15px 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .alert.active {
+        display: block;
+      }
+
+      .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+      }
+
+      /* 響應式設計 */
+      @media (max-width: 768px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .page-header {
+          flex-direction: column;
+          gap: 15px;
+          text-align: center;
+        }
+
+        .header-actions {
+          width: 100%;
+        }
+
+        .header-actions button {
+          flex: 1;
+        }
+
+        .action-buttons {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+      }
+
+      /* Logo */
+      .header-logo {
+        width: 60px;
+        height: auto;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="calculator-container" style="max-width: 1400px">
+      <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+      <div class="page-header">
+        <h1 class="page-title">包裹轉訂單</h1>
+        <div class="header-actions">
+          <button class="btn-back" onclick="goBack()">返回包裹管理</button>
+        </div>
+      </div>
+
+      <!-- 警告訊息區 -->
+      <div id="alert-container"></div>
+
+      <!-- 載入中 -->
+      <div id="loading" class="loading-spinner active">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px; color: #666">載入包裹資料中...</p>
+      </div>
+
+      <!-- 主要內容 -->
+      <div id="main-content" style="display: none">
+        <!-- 包裹資訊區 -->
+        <div class="main-content">
+          <div class="info-card">
+            <h3>包裹資訊</h3>
+            <div class="info-row">
+              <span class="info-label">物流單號：</span>
+              <span class="info-value" id="tracking-number">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">物流公司：</span>
+              <span class="info-value" id="logistics-company">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">商品名稱：</span>
+              <span class="info-value" id="product-name">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">數量：</span>
+              <span class="info-value" id="quantity">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">狀態：</span>
+              <span class="info-value">
+                <span class="status-badge" id="status">-</span>
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">客戶備註：</span>
+              <span class="info-value" id="customer-note">-</span>
+            </div>
+            <div id="product-images-container" style="display: none">
+              <div class="info-row">
+                <span class="info-label">商品圖片：</span>
+              </div>
+              <div class="product-images" id="product-images"></div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <h3>客戶資訊</h3>
+            <div class="info-row">
+              <span class="info-label">姓名：</span>
+              <span class="info-value" id="customer-name">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">電子郵件：</span>
+              <span class="info-value" id="customer-email">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">電話：</span>
+              <span class="info-value" id="customer-phone">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">地址：</span>
+              <span class="info-value" id="customer-address">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">身分證字號：</span>
+              <span class="info-value" id="customer-id">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">統一編號：</span>
+              <span class="info-value" id="customer-taxid">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 轉換表單 -->
+        <div class="conversion-form">
+          <h2>轉換為正式訂單</h2>
+
+          <!-- 實際測量區 -->
+          <div class="form-section">
+            <h4>📏 實際測量數據</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="actual-weight" class="required"
+                  >實際重量 (公斤)</label
+                >
+                <input
+                  type="number"
+                  id="actual-weight"
+                  class="form-control"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="actual-length" class="required">長度 (公分)</label>
+                <input
+                  type="number"
+                  id="actual-length"
+                  class="form-control"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="actual-width" class="required">寬度 (公分)</label>
+                <input
+                  type="number"
+                  id="actual-width"
+                  class="form-control"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="actual-height" class="required">高度 (公分)</label>
+                <input
+                  type="number"
+                  id="actual-height"
+                  class="form-control"
+                  step="0.1"
+                  min="0"
+                  placeholder="0.0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="actual-cbm">材積 (CBM)</label>
+                <input
+                  type="text"
+                  id="actual-cbm"
+                  class="form-control"
+                  readonly
+                  disabled
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 加強保護區 -->
+          <div class="protection-section">
+            <h4>🛡️ 加強保護服務</h4>
+            <div class="protection-checkbox">
+              <input type="checkbox" id="protection-needed" />
+              <label for="protection-needed">需要加強保護包裝</label>
+            </div>
+            <div id="protection-details" style="display: none">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="protection-price">加強保護費用 (NT$)</label>
+                  <input
+                    type="number"
+                    id="protection-price"
+                    class="form-control"
+                    step="1"
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="protection-note">加強保護說明</label>
+                <textarea
+                  id="protection-note"
+                  class="form-control"
+                  placeholder="說明加強保護的方式..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- 報價區 -->
+          <div class="form-section">
+            <h4>💰 報價資訊</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="shipping-fee" class="required">運費 (NT$)</label>
+                <input
+                  type="number"
+                  id="shipping-fee"
+                  class="form-control"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="service-fee">服務費 (NT$)</label>
+                <input
+                  type="number"
+                  id="service-fee"
+                  class="form-control"
+                  step="1"
+                  min="0"
+                  value="0"
+                />
+              </div>
+              <div class="form-group">
+                <label for="other-fee">其他費用 (NT$)</label>
+                <input
+                  type="number"
+                  id="other-fee"
+                  class="form-control"
+                  step="1"
+                  min="0"
+                  value="0"
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="quote-note">報價備註</label>
+              <textarea
+                id="quote-note"
+                class="form-control"
+                placeholder="輸入報價相關說明..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- 價格摘要 -->
+          <div class="price-summary">
+            <h4>總計</h4>
+            <div class="price-item">
+              <span class="price-label">運費：</span>
+              <span class="price-value"
+                >NT$ <span id="summary-shipping">0</span></span
+              >
+            </div>
+            <div class="price-item">
+              <span class="price-label">服務費：</span>
+              <span class="price-value"
+                >NT$ <span id="summary-service">0</span></span
+              >
+            </div>
+            <div class="price-item">
+              <span class="price-label">加強保護費：</span>
+              <span class="price-value"
+                >NT$ <span id="summary-protection">0</span></span
+              >
+            </div>
+            <div class="price-item">
+              <span class="price-label">其他費用：</span>
+              <span class="price-value"
+                >NT$ <span id="summary-other">0</span></span
+              >
+            </div>
+            <div class="price-item">
+              <span class="price-label">總金額：</span>
+              <span class="price-value"
+                >NT$ <span id="summary-total">0</span></span
+              >
+            </div>
+          </div>
+
+          <!-- 按鈕區 -->
+          <div class="action-buttons">
+            <button class="btn btn-secondary" onclick="resetForm()">
+              重置表單
+            </button>
+            <button
+              class="btn btn-primary"
+              id="btn-convert"
+              onclick="convertToOrder()"
+            >
+              確認轉換為訂單
+            </button>
+          </div>
+        </div>
+
+        <!-- 分享區塊 -->
+        <div class="share-section" id="share-section">
+          <h4>📤 訂單分享連結</h4>
+          <p>訂單已成功建立！請將以下連結分享給客戶：</p>
+          <div class="share-link-container">
+            <input
+              type="text"
+              class="share-link-input"
+              id="share-link"
+              readonly
+            />
+            <button class="btn-copy" onclick="copyShareLink()">複製連結</button>
+          </div>
+          <div class="action-buttons" style="margin-top: 20px">
+            <button class="btn btn-success" onclick="viewOrder()">
+              查看訂單
+            </button>
+            <button class="btn btn-primary" onclick="createAnother()">
+              轉換另一個包裹
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 全域變數
+      let currentParcel = null;
+      let currentOrder = null;
+      const parcelId = window.location.pathname.split("/").pop();
+
+      // 認證檢查
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        window.location.href = "/login.html";
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      // 初始化
+      document.addEventListener("DOMContentLoaded", () => {
+        loadParcelData();
+        setupEventListeners();
+      });
+
+      // 載入包裹資料
+      async function loadParcelData() {
+        try {
+          const response = await fetch(
+            `/api/parcel-to-order/check/${parcelId}`,
+            {
+              headers,
+            }
+          );
+
+          if (!response.ok) {
+            if (response.status === 401) {
+              localStorage.removeItem("authToken");
+              window.location.href = "/login.html";
+              return;
+            }
+            const error = await response.json();
+            showAlert("error", error.error || "載入失敗");
+            document.getElementById("loading").classList.remove("active");
+            return;
+          }
+
+          const data = await response.json();
+
+          if (!data.canConvert) {
+            showAlert("warning", data.message);
+            document.getElementById("btn-convert").disabled = true;
+          }
+
+          currentParcel = data.parcel;
+          displayParcelInfo(currentParcel);
+
+          document.getElementById("loading").classList.remove("active");
+          document.getElementById("main-content").style.display = "block";
+        } catch (error) {
+          console.error("載入包裹資料失敗:", error);
+          showAlert("error", "網路錯誤，請稍後再試");
+          document.getElementById("loading").classList.remove("active");
+        }
+      }
+
+      // 顯示包裹資訊
+      function displayParcelInfo(parcel) {
+        // 包裹資訊
+        document.getElementById("tracking-number").textContent =
+          parcel.trackingNumber;
+        document.getElementById("logistics-company").textContent =
+          parcel.logisticsCompany || "-";
+        document.getElementById("product-name").textContent =
+          parcel.productName;
+        document.getElementById("quantity").textContent = parcel.quantity;
+        document.getElementById("customer-note").textContent =
+          parcel.note || "無";
+
+        // 狀態
+        const statusBadge = document.getElementById("status");
+        statusBadge.textContent = getStatusText(parcel.status);
+        statusBadge.className = `status-badge status-${parcel.status}`;
+
+        // 商品圖片
+        if (parcel.productImages && parcel.productImages.length > 0) {
+          document.getElementById("product-images-container").style.display =
+            "block";
+          const imagesContainer = document.getElementById("product-images");
+          imagesContainer.innerHTML = parcel.productImages
+            .map(
+              (img) =>
+                `<img src="${getFullImageUrl(
+                  img
+                )}" alt="商品圖片" onclick="window.open('${getFullImageUrl(
+                  img
+                )}', '_blank')">`
+            )
+            .join("");
+        }
+
+        // 客戶資訊
+        if (parcel.customer) {
+          document.getElementById("customer-name").textContent =
+            parcel.customer.name;
+          document.getElementById("customer-email").textContent =
+            parcel.customer.email;
+          document.getElementById("customer-phone").textContent =
+            parcel.customer.phone || "-";
+          document.getElementById("customer-address").textContent =
+            parcel.customer.defaultAddress || "待確認";
+          document.getElementById("customer-id").textContent =
+            parcel.customer.idNumber || "-";
+          document.getElementById("customer-taxid").textContent =
+            parcel.customer.taxId || "-";
+        } else {
+          document.getElementById("customer-name").textContent =
+            parcel.guestName || "訪客";
+          document.getElementById("customer-email").textContent =
+            parcel.guestEmail || "-";
+          document.getElementById("customer-phone").textContent =
+            parcel.guestPhone || "-";
+          document.getElementById("customer-address").textContent = "待確認";
+          document.getElementById("customer-id").textContent = "-";
+          document.getElementById("customer-taxid").textContent = "-";
+        }
+      }
+
+      // 設定事件監聽器
+      function setupEventListeners() {
+        // 尺寸變更時計算材積
+        ["actual-length", "actual-width", "actual-height"].forEach((id) => {
+          document.getElementById(id).addEventListener("input", calculateCBM);
+        });
+
+        // 價格變更時更新總計
+        [
+          "shipping-fee",
+          "service-fee",
+          "protection-price",
+          "other-fee",
+        ].forEach((id) => {
+          document
+            .getElementById(id)
+            .addEventListener("input", updatePriceSummary);
+        });
+
+        // 加強保護勾選
+        document
+          .getElementById("protection-needed")
+          .addEventListener("change", (e) => {
+            document.getElementById("protection-details").style.display = e
+              .target.checked
+              ? "block"
+              : "none";
+            if (!e.target.checked) {
+              document.getElementById("protection-price").value = "0";
+            }
+            updatePriceSummary();
+          });
+      }
+
+      // 計算材積
+      function calculateCBM() {
+        const length =
+          parseFloat(document.getElementById("actual-length").value) || 0;
+        const width =
+          parseFloat(document.getElementById("actual-width").value) || 0;
+        const height =
+          parseFloat(document.getElementById("actual-height").value) || 0;
+
+        if (length > 0 && width > 0 && height > 0) {
+          const cbm = (length * width * height) / 1000000;
+          document.getElementById("actual-cbm").value = cbm.toFixed(4) + " m³";
+        } else {
+          document.getElementById("actual-cbm").value = "";
+        }
+      }
+
+      // 更新價格摘要
+      function updatePriceSummary() {
+        const shipping =
+          parseFloat(document.getElementById("shipping-fee").value) || 0;
+        const service =
+          parseFloat(document.getElementById("service-fee").value) || 0;
+        const protection =
+          parseFloat(document.getElementById("protection-price").value) || 0;
+        const other =
+          parseFloat(document.getElementById("other-fee").value) || 0;
+        const total = shipping + service + protection + other;
+
+        document.getElementById("summary-shipping").textContent =
+          shipping.toLocaleString();
+        document.getElementById("summary-service").textContent =
+          service.toLocaleString();
+        document.getElementById("summary-protection").textContent =
+          protection.toLocaleString();
+        document.getElementById("summary-other").textContent =
+          other.toLocaleString();
+        document.getElementById("summary-total").textContent =
+          total.toLocaleString();
+      }
+
+      // 轉換為訂單
+      async function convertToOrder() {
+        // 驗證必填欄位
+        const weight = parseFloat(
+          document.getElementById("actual-weight").value
+        );
+        const length = parseFloat(
+          document.getElementById("actual-length").value
+        );
+        const width = parseFloat(document.getElementById("actual-width").value);
+        const height = parseFloat(
+          document.getElementById("actual-height").value
+        );
+        const shippingFee = parseFloat(
+          document.getElementById("shipping-fee").value
+        );
+
+        if (!weight || !length || !width || !height || !shippingFee) {
+          showAlert("error", "請填寫所有必填欄位");
+          return;
+        }
+
+        if (!confirm("確定要將此包裹轉換為正式訂單嗎？")) {
+          return;
+        }
+
+        // 準備資料
+        const data = {
+          actualWeight: weight,
+          actualLength: length,
+          actualWidth: width,
+          actualHeight: height,
+          protectionNeeded:
+            document.getElementById("protection-needed").checked,
+          protectionPrice:
+            parseFloat(document.getElementById("protection-price").value) || 0,
+          protectionNote: document.getElementById("protection-note").value,
+          finalQuoteData: {
+            shipping: shippingFee,
+            service:
+              parseFloat(document.getElementById("service-fee").value) || 0,
+            protection:
+              parseFloat(document.getElementById("protection-price").value) ||
+              0,
+            other: parseFloat(document.getElementById("other-fee").value) || 0,
+          },
+          finalTotalAmount: parseFloat(
+            document
+              .getElementById("summary-total")
+              .textContent.replace(/,/g, "")
+          ),
+          quoteNote: document.getElementById("quote-note").value,
+        };
+
+        // 顯示載入
+        document.getElementById("btn-convert").disabled = true;
+        document.getElementById("btn-convert").textContent = "轉換中...";
+
+        try {
+          const response = await fetch(
+            `/api/parcel-to-order/convert/${parcelId}`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify(data),
+            }
+          );
+
+          if (!response.ok) {
+            const error = await response.json();
+            showAlert("error", error.error || "轉換失敗");
+            return;
+          }
+
+          const result = await response.json();
+          currentOrder = result.order;
+
+          showAlert("success", "包裹已成功轉換為訂單！");
+
+          // 顯示分享區塊
+          document.getElementById("share-link").value = result.order.shareUrl;
+          document.getElementById("share-section").classList.add("active");
+          document.querySelector(".conversion-form").style.display = "none";
+        } catch (error) {
+          console.error("轉換失敗:", error);
+          showAlert("error", "網路錯誤，請稍後再試");
+        } finally {
+          document.getElementById("btn-convert").disabled = false;
+          document.getElementById("btn-convert").textContent = "確認轉換為訂單";
+        }
+      }
+
+      // 輔助函數
+      function getStatusText(status) {
+        const statusMap = {
+          PENDING: "待確認",
+          CONFIRMED: "已確認",
+          ARRIVED: "已到倉",
+          COMPLETED: "已完成",
+          CANCELLED: "已取消",
+        };
+        return statusMap[status] || status;
+      }
+
+      function getFullImageUrl(imagePath) {
+        if (
+          imagePath.startsWith("http://") ||
+          imagePath.startsWith("https://")
+        ) {
+          return imagePath;
+        }
+        const baseUrl = window.location.origin;
+        const path = imagePath.startsWith("/") ? imagePath : "/" + imagePath;
+        return baseUrl + path;
+      }
+
+      function showAlert(type, message) {
+        const alertContainer = document.getElementById("alert-container");
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${type} active`;
+        alert.textContent = message;
+        alertContainer.innerHTML = "";
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => {
+          alert.classList.remove("active");
+          setTimeout(() => alert.remove(), 300);
+        }, 5000);
+      }
+
+      function copyShareLink() {
+        const input = document.getElementById("share-link");
+        input.select();
+        document.execCommand("copy");
+        showAlert("success", "連結已複製到剪貼簿！");
+      }
+
+      function resetForm() {
+        if (confirm("確定要重置表單嗎？所有輸入的資料將會清除。")) {
+          document.querySelectorAll(".form-control").forEach((input) => {
+            if (!input.disabled && !input.readOnly) {
+              input.value = "";
+            }
+          });
+          document.getElementById("protection-needed").checked = false;
+          document.getElementById("protection-details").style.display = "none";
+          updatePriceSummary();
+        }
+      }
+
+      function goBack() {
+        window.location.href = "/admin-parcels";
+      }
+
+      function viewOrder() {
+        if (currentOrder) {
+          window.open(`/admin?orderId=${currentOrder.id}`, "_blank");
+        }
+      }
+
+      function createAnother() {
+        window.location.href = "/admin-parcels";
+      }
+    </script>
+    <script src="/admin-parcel-convert.js"></script>
+  </body>
+</html>

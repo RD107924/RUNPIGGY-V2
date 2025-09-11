@@ -1,4 +1,4 @@
-// server.js (整合會員系統與包裹預報版本 - 包含 email 和 taxId)
+// server.js (整合會員系統與包裹預報版本 - 包含包裹轉訂單功能)
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const path = require("path");
@@ -32,6 +32,23 @@ try {
   parcelRoutes = router;
 }
 
+// 檢查 parcelToOrderRoutes 是否存在
+let parcelToOrderRoutes;
+try {
+  parcelToOrderRoutes = require("./parcelToOrderRoutes");
+  console.log("包裹轉訂單路由載入成功");
+} catch (error) {
+  console.log("包裹轉訂單路由尚未建立，使用預設路由");
+  const router = express.Router();
+  router.get("/test", (req, res) => {
+    res.json({
+      message: "包裹轉訂單功能尚未啟用",
+      timestamp: new Date().toISOString(),
+    });
+  });
+  parcelToOrderRoutes = router;
+}
+
 const app = express();
 const prisma = new PrismaClient();
 
@@ -46,6 +63,7 @@ app.use("/api/quotes", quoteRoutes); // 公開的估價單 API
 app.use("/api/users", userRoutes); // 公開的使用者登入 API
 app.use("/api/customers", customerRoutes); // 會員相關 API
 app.use("/api/parcels", parcelRoutes); // 包裹預報 API
+app.use("/api/parcel-to-order", parcelToOrderRoutes); // 包裹轉訂單 API（新增）
 app.use("/api/admin", authMiddleware, adminRoutes); // 受保護的後台管理 API
 
 // 客戶提交正式訂單的 API (支援會員和非會員) - 更新版本包含 email 和 taxId
@@ -189,7 +207,76 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-// 處理前端頁面請求
+// === 新增：訂單分享頁面 API ===
+app.get("/api/order-share/:shareToken", async (req, res) => {
+  try {
+    const { shareToken } = req.params;
+
+    const order = await prisma.shipmentOrder.findUnique({
+      where: { shareToken },
+      include: {
+        customer: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        sourceParcel: {
+          select: {
+            trackingNumber: true,
+            productName: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "找不到此訂單" });
+    }
+
+    // 更新查看次數
+    await prisma.shipmentOrder.update({
+      where: { id: order.id },
+      data: {
+        shareViewCount: order.shareViewCount + 1,
+        shareLastViewedAt: new Date(),
+      },
+    });
+
+    // 解析 JSON 欄位
+    const orderData = {
+      ...order,
+      calculationResult:
+        typeof order.calculationResult === "string"
+          ? JSON.parse(order.calculationResult)
+          : order.calculationResult,
+      additionalServices: order.additionalServices
+        ? JSON.parse(order.additionalServices)
+        : null,
+      finalQuoteData: order.finalQuoteData
+        ? JSON.parse(order.finalQuoteData)
+        : null,
+    };
+
+    // 移除敏感資訊
+    delete orderData.internalNote;
+    delete orderData.assignedToId;
+    delete orderData.shareToken; // 不要暴露 token 本身
+
+    res.json({
+      success: true,
+      order: orderData,
+      viewCount: order.shareViewCount + 1,
+    });
+  } catch (error) {
+    console.error("取得分享訂單失敗:", error);
+    res.status(500).json({ error: "伺服器內部錯誤" });
+  }
+});
+
+// === 處理前端頁面請求 ===
 app.get("/quote.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "quote.html"));
 });
@@ -200,13 +287,22 @@ app.get("/admin", (req, res) => {
 
 app.get("/admin-parcels", (req, res) => {
   const filePath = path.join(__dirname, "public", "admin-parcels.html");
-  // 檢查檔案是否存在
   const fs = require("fs");
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
-    // 如果包裹管理頁面還不存在，重定向到主管理頁面
     res.redirect("/admin");
+  }
+});
+
+// 新增：包裹轉訂單管理頁面
+app.get("/admin-parcel-convert/:parcelId", (req, res) => {
+  const filePath = path.join(__dirname, "public", "admin-parcel-convert.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("包裹轉訂單頁面尚未建立");
   }
 });
 
@@ -224,12 +320,10 @@ app.get("/customer.html", (req, res) => {
 
 app.get("/parcel.html", (req, res) => {
   const filePath = path.join(__dirname, "public", "parcel.html");
-  // 檢查檔案是否存在
   const fs = require("fs");
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
-    // 如果包裹預報頁面還不存在，重定向到會員中心
     res.redirect("/customer.html");
   }
 });
@@ -241,7 +335,6 @@ app.get("/parcel-public", (req, res) => {
   if (fs.existsSync(filePath)) {
     res.sendFile(filePath);
   } else {
-    // 如果檔案不存在，顯示錯誤訊息
     res.status(404).send("包裹預報頁面尚未建立");
   }
 });
@@ -249,6 +342,57 @@ app.get("/parcel-public", (req, res) => {
 // 訂單頁面路由
 app.get("/order.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "order.html"));
+});
+
+// 新增：訂單分享頁面路由
+app.get("/order-share/:shareToken", (req, res) => {
+  const filePath = path.join(__dirname, "public", "order-share.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>訂單分享</title>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+          }
+          .error-container {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          h1 { color: #333; }
+          p { color: #666; margin: 20px 0; }
+          a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="error-container">
+          <h1>訂單分享功能建置中</h1>
+          <p>此功能即將上線，敬請期待！</p>
+          <a href="/">返回首頁</a>
+        </div>
+      </body>
+      </html>
+    `);
+  }
 });
 
 // 錯誤處理中間件
