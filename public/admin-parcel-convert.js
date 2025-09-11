@@ -1,4 +1,4 @@
-// admin-parcel-convert.js - 包裹轉訂單管理介面邏輯
+// admin-parcel-convert.js - 包裹轉訂單管理介面邏輯（加入傢俱計算器規則）
 (function () {
   "use strict";
 
@@ -7,6 +7,36 @@
   let currentOrder = null;
   let isConverting = false;
   let parcelId = null;
+
+  // ===== 傢俱計算器常數定義 =====
+  const VOLUME_DIVISOR = 28317; // 材積除數（改為與主頁一致）
+  const CBM_TO_CAI_FACTOR = 35.3; // 立方米轉材係數
+  const MINIMUM_CHARGE = 2000; // 最低運費
+  const OVERWEIGHT_LIMIT = 100; // 超重限制 (kg)
+  const OVERWEIGHT_FEE = 800; // 超重費（固定收一次）
+  const OVERSIZED_LIMIT = 300; // 超長限制 (cm)
+  const OVERSIZED_FEE = 800; // 超長費（固定收一次）
+
+  // 費率定義（與主頁保持一致）
+  const rates = {
+    general: { name: "一般家具", weightRate: 22, volumeRate: 125 },
+    special_a: { name: "特殊家具A", weightRate: 32, volumeRate: 184 },
+    special_b: { name: "特殊家具B", weightRate: 40, volumeRate: 224 },
+    special_c: { name: "特殊家具C", weightRate: 50, volumeRate: 274 },
+  };
+
+  // 偏遠地區費率表
+  const remoteAreaRates = {
+    0: 0, // 一般地區
+    1800: 1800,
+    2000: 2000,
+    2500: 2500,
+    3000: 3000,
+    4000: 4000,
+    4500: 4500,
+    5000: 5000,
+    7000: 7000,
+  };
 
   // API 配置
   const API_BASE = "/api/parcel-to-order";
@@ -60,6 +90,174 @@
 
     // 初始化價格摘要
     updatePriceSummary();
+
+    // 新增：加入家具類型選擇器（如果需要）
+    addFurnitureTypeSelector();
+  }
+
+  // ===== 新增：家具類型選擇器 =====
+  function addFurnitureTypeSelector() {
+    // 在實際測量數據區域後面加入家具類型選擇
+    const measurementSection = document.querySelector(".form-section");
+    if (
+      measurementSection &&
+      !document.getElementById("furniture-type-section")
+    ) {
+      const furnitureTypeHTML = `
+        <div class="form-section" id="furniture-type-section" style="margin-top: 20px;">
+          <h4>📦 家具類型</h4>
+          <div class="form-group">
+            <label for="furniture-type">選擇家具類型</label>
+            <select id="furniture-type" class="form-control">
+              <option value="general">一般家具 (沙發、床架、桌椅等)</option>
+              <option value="special_a">特殊家具A (大理石、岩板、床墊等)</option>
+              <option value="special_b">特殊家具B (門、磁磚、玻璃屏風等)</option>
+              <option value="special_c">特殊家具C (智能馬桶、冰箱等)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="delivery-location">配送地區</label>
+            <select id="delivery-location" class="form-control">
+              <option value="0">一般地區 (無額外費用)</option>
+              <option value="1800">偏遠地區 - NT$1800/方</option>
+              <option value="2000">偏遠地區 - NT$2000/方</option>
+              <option value="2500">偏遠地區 - NT$2500/方</option>
+              <option value="3000">偏遠地區 - NT$3000/方</option>
+              <option value="4000">偏遠地區 - NT$4000/方</option>
+              <option value="4500">偏遠地區 - NT$4500/方</option>
+              <option value="5000">偏遠地區 - NT$5000/方</option>
+              <option value="7000">偏遠地區 - NT$7000/方</option>
+            </select>
+          </div>
+        </div>
+      `;
+      measurementSection.insertAdjacentHTML("afterend", furnitureTypeHTML);
+
+      // 監聽變更事件
+      document
+        .getElementById("furniture-type")
+        .addEventListener("change", calculateShippingFee);
+      document
+        .getElementById("delivery-location")
+        .addEventListener("change", calculateShippingFee);
+    }
+  }
+
+  // ===== 新增：自動計算運費函數 =====
+  function calculateShippingFee() {
+    const weight =
+      parseFloat(document.getElementById("actual-weight").value) || 0;
+    const length =
+      parseFloat(document.getElementById("actual-length").value) || 0;
+    const width =
+      parseFloat(document.getElementById("actual-width").value) || 0;
+    const height =
+      parseFloat(document.getElementById("actual-height").value) || 0;
+
+    if (weight <= 0 || length <= 0 || width <= 0 || height <= 0) {
+      return;
+    }
+
+    // 取得家具類型
+    const furnitureTypeEl = document.getElementById("furniture-type");
+    const furnitureType = furnitureTypeEl ? furnitureTypeEl.value : "general";
+    const rateInfo = rates[furnitureType];
+
+    // 計算材積
+    const singleVolume = (length * width * height) / VOLUME_DIVISOR;
+    const cbm = singleVolume / CBM_TO_CAI_FACTOR;
+
+    // 計算基本運費
+    const volumeCost = singleVolume * rateInfo.volumeRate;
+    const weightCost = weight * rateInfo.weightRate;
+    let baseFreight = Math.max(volumeCost, weightCost);
+
+    // 應用最低運費
+    baseFreight = Math.max(baseFreight, MINIMUM_CHARGE);
+
+    // 檢查超重超長
+    let additionalFees = 0;
+    let feeNotes = [];
+
+    if (weight > OVERWEIGHT_LIMIT) {
+      additionalFees += OVERWEIGHT_FEE;
+      feeNotes.push(`超重費 NT$${OVERWEIGHT_FEE}`);
+    }
+
+    const maxDimension = Math.max(length, width, height);
+    if (maxDimension > OVERSIZED_LIMIT) {
+      additionalFees += OVERSIZED_FEE;
+      feeNotes.push(`超長費 NT$${OVERSIZED_FEE}`);
+    }
+
+    // 計算偏遠地區費用
+    const deliveryLocationEl = document.getElementById("delivery-location");
+    const remoteAreaRate = deliveryLocationEl
+      ? parseFloat(deliveryLocationEl.value)
+      : 0;
+    let remoteFee = 0;
+
+    if (remoteAreaRate > 0) {
+      remoteFee = cbm * remoteAreaRate;
+      feeNotes.push(`偏遠地區費 NT$${Math.round(remoteFee).toLocaleString()}`);
+    }
+
+    // 計算總運費
+    const totalShippingFee = baseFreight + additionalFees + remoteFee;
+
+    // 自動填入運費欄位
+    const shippingFeeInput = document.getElementById("shipping-fee");
+    if (shippingFeeInput) {
+      shippingFeeInput.value = Math.round(totalShippingFee);
+
+      // 顯示計算明細
+      showCalculationDetails({
+        baseFreight: Math.round(baseFreight),
+        additionalFees: additionalFees,
+        remoteFee: Math.round(remoteFee),
+        totalShippingFee: Math.round(totalShippingFee),
+        feeNotes: feeNotes,
+        singleVolume: singleVolume.toFixed(4),
+        cbm: cbm.toFixed(4),
+        furnitureType: rateInfo.name,
+      });
+
+      // 更新價格摘要
+      updatePriceSummary();
+    }
+  }
+
+  // ===== 新增：顯示計算明細 =====
+  function showCalculationDetails(details) {
+    // 查找或創建計算明細顯示區域
+    let detailsDiv = document.getElementById("calculation-details");
+    if (!detailsDiv) {
+      const shippingFeeGroup = document
+        .getElementById("shipping-fee")
+        .closest(".form-group");
+      if (shippingFeeGroup) {
+        detailsDiv = document.createElement("div");
+        detailsDiv.id = "calculation-details";
+        detailsDiv.style.cssText =
+          "margin-top: 10px; padding: 10px; background: #f0f9ff; border-radius: 5px; font-size: 14px;";
+        shippingFeeGroup.appendChild(detailsDiv);
+      }
+    }
+
+    if (detailsDiv) {
+      detailsDiv.innerHTML = `
+        <strong>運費計算明細：</strong><br>
+        類型：${details.furnitureType}<br>
+        材積：${details.singleVolume} 材 (${details.cbm} CBM)<br>
+        基本運費：NT$ ${details.baseFreight.toLocaleString()}<br>
+        ${
+          details.feeNotes.length > 0
+            ? "額外費用：" + details.feeNotes.join(", ") + "<br>"
+            : ""
+        }
+        <strong style="color: #1b5e20;">總運費：NT$ ${details.totalShippingFee.toLocaleString()}</strong>
+      `;
+    }
   }
 
   // ===== 工具函數 =====
@@ -356,14 +554,22 @@
 
   // ===== 事件監聽器設定 =====
   function setupEventListeners() {
-    // 尺寸輸入 - 計算材積
-    ["actual-length", "actual-width", "actual-height"].forEach((id) => {
-      const element = document.getElementById(id);
-      if (element) {
-        element.addEventListener("input", calculateCBM);
-        element.addEventListener("change", calculateCBM);
+    // 尺寸輸入 - 計算材積並自動計算運費
+    ["actual-length", "actual-width", "actual-height", "actual-weight"].forEach(
+      (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.addEventListener("input", () => {
+            calculateCBM();
+            calculateShippingFee(); // 新增：自動計算運費
+          });
+          element.addEventListener("change", () => {
+            calculateCBM();
+            calculateShippingFee(); // 新增：自動計算運費
+          });
+        }
       }
-    });
+    );
 
     // 價格輸入 - 更新總計
     ["shipping-fee", "service-fee", "protection-price", "other-fee"].forEach(
@@ -446,12 +652,21 @@
     if (!cbmEl) return;
 
     if (length > 0 && width > 0 && height > 0) {
-      const cbm = (length * width * height) / 1000000;
+      // 修改：使用傢俱計算器的公式
+      const volume = (length * width * height) / VOLUME_DIVISOR;
+      const cbm = volume / CBM_TO_CAI_FACTOR;
       cbmEl.value = cbm.toFixed(4) + " m³";
 
       // 檢查是否超大件
-      if (length > 300 || width > 300 || height > 300) {
-        showAlert("warning", "注意：單邊超過 300cm，可能需要收取超長費");
+      if (
+        length > OVERSIZED_LIMIT ||
+        width > OVERSIZED_LIMIT ||
+        height > OVERSIZED_LIMIT
+      ) {
+        showAlert(
+          "warning",
+          `注意：單邊超過 ${OVERSIZED_LIMIT}cm，將收取超長費 NT$${OVERSIZED_FEE}`
+        );
       }
     } else {
       cbmEl.value = "";
@@ -654,6 +869,21 @@
     const protectionPrice =
       parseFloat(document.getElementById("protection-price").value) || 0;
 
+    // 新增：收集家具類型和配送地區
+    const furnitureTypeEl = document.getElementById("furniture-type");
+    const deliveryLocationEl = document.getElementById("delivery-location");
+
+    const calculationData = {
+      weight: weight,
+      length: length,
+      width: width,
+      height: height,
+      furnitureType: furnitureTypeEl ? furnitureTypeEl.value : "general",
+      deliveryLocation: deliveryLocationEl ? deliveryLocationEl.value : "0",
+      volume: (length * width * height) / VOLUME_DIVISOR,
+      cbm: (length * width * height) / VOLUME_DIVISOR / CBM_TO_CAI_FACTOR,
+    };
+
     return {
       actualWeight: weight,
       actualLength: length,
@@ -671,6 +901,7 @@
       finalTotalAmount: shippingFee + serviceFee + protectionPrice + otherFee,
       quoteNote: document.getElementById("quote-note").value,
       additionalServices: collectAdditionalServices(),
+      calculationData: calculationData, // 新增：包含計算相關資料
     };
   }
 
@@ -748,6 +979,12 @@
     document.getElementById("protection-needed").checked = false;
     document.getElementById("protection-details").style.display = "none";
 
+    // 清除計算明細
+    const detailsDiv = document.getElementById("calculation-details");
+    if (detailsDiv) {
+      detailsDiv.remove();
+    }
+
     // 更新價格摘要
     updatePriceSummary();
 
@@ -775,7 +1012,7 @@
       if (successful) {
         showAlert("success", "連結已複製到剪貼簿！");
 
-        // 視覺反饋
+        // 視覺回饋
         const copyBtn = e.target;
         const originalText = copyBtn.textContent;
         copyBtn.textContent = "已複製！";
@@ -836,5 +1073,6 @@
     getCurrentOrder: () => currentOrder,
     updatePrices: updatePriceSummary,
     calculateCBM: calculateCBM,
+    calculateShipping: calculateShippingFee, // 新增：匯出運費計算函數
   };
 })();

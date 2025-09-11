@@ -32,20 +32,240 @@ try {
   parcelRoutes = router;
 }
 
-// 檢查 parcelToOrderRoutes 是否存在
+// 檢查 parcelToOrderRoutes 是否存在，如果不存在則建立包含計算邏輯的路由
 let parcelToOrderRoutes;
 try {
   parcelToOrderRoutes = require("./parcelToOrderRoutes");
   console.log("包裹轉訂單路由載入成功");
 } catch (error) {
-  console.log("包裹轉訂單路由尚未建立，使用預設路由");
+  console.log("包裹轉訂單路由尚未建立，使用內建路由");
   const router = express.Router();
+
+  // 傢俱計算器常數定義
+  const VOLUME_DIVISOR = 28317;
+  const CBM_TO_CAI_FACTOR = 35.3;
+  const MINIMUM_CHARGE = 2000;
+  const OVERWEIGHT_LIMIT = 100;
+  const OVERWEIGHT_FEE = 800;
+  const OVERSIZED_LIMIT = 300;
+  const OVERSIZED_FEE = 800;
+
+  const rates = {
+    general: { name: "一般家具", weightRate: 22, volumeRate: 125 },
+    special_a: { name: "特殊家具A", weightRate: 32, volumeRate: 184 },
+    special_b: { name: "特殊家具B", weightRate: 40, volumeRate: 224 },
+    special_c: { name: "特殊家具C", weightRate: 50, volumeRate: 274 },
+  };
+
+  // 檢查包裹是否可轉換
+  router.get("/check/:parcelId", authMiddleware, async (req, res) => {
+    try {
+      const { parcelId } = req.params;
+
+      // 使用 Prisma 查詢包裹（如果有資料庫）
+      const parcel = await prisma.parcel.findUnique({
+        where: { id: parcelId },
+        include: {
+          customer: true,
+          convertedOrder: true,
+        },
+      });
+
+      if (!parcel) {
+        return res.status(404).json({ error: "找不到此包裹" });
+      }
+
+      // 檢查是否可以轉換
+      const canConvert = parcel.status === "ARRIVED" && !parcel.isConverted;
+
+      res.json({
+        parcel,
+        canConvert,
+        message: canConvert
+          ? "包裹可以轉換為訂單"
+          : parcel.isConverted
+          ? "此包裹已經轉換為訂單"
+          : "包裹必須為已到倉狀態才能轉換",
+      });
+    } catch (error) {
+      console.error("檢查包裹失敗:", error);
+      res.status(500).json({ error: "伺服器內部錯誤" });
+    }
+  });
+
+  // 轉換包裹為訂單
+  router.post("/convert/:parcelId", authMiddleware, async (req, res) => {
+    try {
+      const { parcelId } = req.params;
+      const {
+        actualWeight,
+        actualLength,
+        actualWidth,
+        actualHeight,
+        furnitureType = "general",
+        deliveryLocation = "0",
+        protectionNeeded,
+        protectionPrice,
+        protectionNote,
+        finalQuoteData,
+        finalTotalAmount,
+        quoteNote,
+      } = req.body;
+
+      // 驗證必填欄位
+      if (!actualWeight || !actualLength || !actualWidth || !actualHeight) {
+        return res.status(400).json({ error: "缺少必要的測量數據" });
+      }
+
+      // 查詢包裹
+      const parcel = await prisma.parcel.findUnique({
+        where: { id: parcelId },
+        include: { customer: true },
+      });
+
+      if (!parcel) {
+        return res.status(404).json({ error: "找不到此包裹" });
+      }
+
+      if (parcel.isConverted) {
+        return res.status(400).json({ error: "此包裹已經轉換為訂單" });
+      }
+
+      // 計算運費（使用傢俱計算器規則）
+      const rateInfo = rates[furnitureType] || rates.general;
+      const volume =
+        (actualLength * actualWidth * actualHeight) / VOLUME_DIVISOR;
+      const cbm = volume / CBM_TO_CAI_FACTOR;
+
+      // 基本運費計算
+      const volumeCost = volume * rateInfo.volumeRate;
+      const weightCost = actualWeight * rateInfo.weightRate;
+      let baseFreight = Math.max(volumeCost, weightCost);
+      baseFreight = Math.max(baseFreight, MINIMUM_CHARGE);
+
+      // 額外費用計算
+      let additionalFees = 0;
+      const maxDimension = Math.max(actualLength, actualWidth, actualHeight);
+
+      if (actualWeight > OVERWEIGHT_LIMIT) {
+        additionalFees += OVERWEIGHT_FEE;
+      }
+
+      if (maxDimension > OVERSIZED_LIMIT) {
+        additionalFees += OVERSIZED_FEE;
+      }
+
+      // 偏遠地區費用
+      const remoteAreaRate = parseFloat(deliveryLocation);
+      const remoteFee = remoteAreaRate > 0 ? cbm * remoteAreaRate : 0;
+
+      // 計算建議運費
+      const suggestedShippingFee = Math.round(
+        baseFreight + additionalFees + remoteFee
+      );
+
+      // 建立計算結果物件
+      const calculationResult = {
+        weight: actualWeight,
+        length: actualLength,
+        width: actualWidth,
+        height: actualHeight,
+        volume: volume.toFixed(4),
+        cbm: cbm.toFixed(4),
+        furnitureType: rateInfo.name,
+        baseFreight: Math.round(baseFreight),
+        additionalFees,
+        remoteFee: Math.round(remoteFee),
+        suggestedTotal: suggestedShippingFee,
+        finalTotal: finalTotalAmount || suggestedShippingFee,
+      };
+
+      // 生成分享 token
+      const crypto = require("crypto");
+      const shareToken = crypto.randomBytes(32).toString("hex");
+
+      // 建立訂單
+      const order = await prisma.$transaction(async (tx) => {
+        // 建立訂單
+        const newOrder = await tx.shipmentOrder.create({
+          data: {
+            lineNickname: parcel.customer?.lineNickname || "包裹轉訂單",
+            recipientName:
+              parcel.customer?.name || parcel.guestName || "待確認",
+            address: parcel.customer?.defaultAddress || "待確認",
+            phone: parcel.customer?.phone || parcel.guestPhone || "待確認",
+            email: parcel.customer?.email || parcel.guestEmail || "待確認",
+            idNumber: parcel.customer?.idNumber || "待確認",
+            taxId: parcel.customer?.taxId,
+            calculationResult: JSON.stringify(calculationResult),
+            additionalServices: protectionNeeded
+              ? JSON.stringify({
+                  protection: {
+                    needed: true,
+                    price: protectionPrice,
+                    note: protectionNote,
+                  },
+                })
+              : null,
+            customerId: parcel.customerId,
+            sourceParcelId: parcel.id,
+            finalQuoteData: JSON.stringify(finalQuoteData),
+            finalTotalAmount,
+            shareToken,
+            status: "PENDING",
+          },
+        });
+
+        // 更新包裹狀態
+        await tx.parcel.update({
+          where: { id: parcelId },
+          data: {
+            isConverted: true,
+            convertedOrderId: newOrder.id,
+            status: "COMPLETED",
+          },
+        });
+
+        return newOrder;
+      });
+
+      // 生成分享連結
+      const shareUrl = `${req.protocol}://${req.get(
+        "host"
+      )}/order-share/${shareToken}`;
+
+      res.json({
+        success: true,
+        order: {
+          ...order,
+          shareUrl,
+          calculationResult,
+        },
+      });
+    } catch (error) {
+      console.error("轉換訂單失敗:", error);
+      res.status(500).json({
+        error: "轉換失敗",
+        details:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
+    }
+  });
+
+  // 測試端點
   router.get("/test", (req, res) => {
     res.json({
-      message: "包裹轉訂單功能尚未啟用",
+      message: "包裹轉訂單功能已啟用",
       timestamp: new Date().toISOString(),
+      features: {
+        furnitureCalculator: true,
+        remoteAreaFee: true,
+        overweightFee: true,
+        oversizedFee: true,
+      },
     });
   });
+
   parcelToOrderRoutes = router;
 }
 
@@ -142,6 +362,10 @@ app.post("/api/orders", async (req, res) => {
       remoteAreaRate: calculationResult.remoteAreaRate,
       remoteFee: calculationResult.remoteFee,
       hasOversizedItem: calculationResult.hasOversizedItem,
+      hasAnyOversizedItem: calculationResult.hasAnyOversizedItem,
+      hasAnyOverweightItem: calculationResult.hasAnyOverweightItem,
+      totalOverweightFee: calculationResult.totalOverweightFee,
+      totalOversizedFee: calculationResult.totalOversizedFee,
       finalTotal: calculationResult.finalTotal,
     };
 

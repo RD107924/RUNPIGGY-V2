@@ -220,6 +220,20 @@
         min-height: 80px;
       }
 
+      /* 計算明細區域 */
+      .calculation-details {
+        background: #e8f4fd;
+        border: 1px solid #1976d2;
+        border-radius: 5px;
+        padding: 15px;
+        margin-top: 15px;
+        font-size: 14px;
+      }
+
+      .calculation-details strong {
+        color: #1565c0;
+      }
+
       /* 加強保護區塊 */
       .protection-section {
         background: #fff8e1;
@@ -342,6 +356,18 @@
         background-color: #596164;
       }
 
+      /* 自動計算按鈕 */
+      .btn-calculate {
+        background-color: #ff9800;
+        color: white;
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+
+      .btn-calculate:hover {
+        background-color: #f57c00;
+      }
+
       /* 分享區塊 */
       .share-section {
         background: #e3f2fd;
@@ -449,6 +475,12 @@
         background-color: #fff3cd;
         color: #856404;
         border: 1px solid #ffeeba;
+      }
+
+      .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
       }
 
       /* 響應式設計 */
@@ -648,6 +680,50 @@
             </div>
           </div>
 
+          <!-- 新增：家具類型選擇區 -->
+          <div class="form-section" id="furniture-type-section">
+            <h4>📦 運費計算設定</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="furniture-type">家具類型</label>
+                <select id="furniture-type" class="form-control">
+                  <option value="general">一般家具 (沙發、床架、桌椅等)</option>
+                  <option value="special_a">
+                    特殊家具A (大理石、岩板、床墊等)
+                  </option>
+                  <option value="special_b">
+                    特殊家具B (門、磁磚、玻璃屏風等)
+                  </option>
+                  <option value="special_c">
+                    特殊家具C (智能馬桶、冰箱等)
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="delivery-location">配送地區</label>
+                <select id="delivery-location" class="form-control">
+                  <option value="0">一般地區 (無額外費用)</option>
+                  <option value="1800">偏遠地區 - NT$1800/方</option>
+                  <option value="2000">偏遠地區 - NT$2000/方</option>
+                  <option value="2500">偏遠地區 - NT$2500/方</option>
+                  <option value="3000">偏遠地區 - NT$3000/方</option>
+                  <option value="4000">偏遠地區 - NT$4000/方</option>
+                  <option value="4500">偏遠地區 - NT$4500/方</option>
+                  <option value="5000">偏遠地區 - NT$5000/方</option>
+                  <option value="7000">偏遠地區 - NT$7000/方</option>
+                </select>
+              </div>
+            </div>
+            <div class="action-buttons" style="margin-top: 15px">
+              <button
+                class="btn btn-calculate"
+                onclick="ParcelConverter.calculateShipping()"
+              >
+                自動計算運費
+              </button>
+            </div>
+          </div>
+
           <!-- 加強保護區 -->
           <div class="protection-section">
             <h4>🛡️ 加強保護服務</h4>
@@ -694,6 +770,12 @@
                   min="0"
                   placeholder="0"
                 />
+                <!-- 運費計算明細顯示區 -->
+                <div
+                  id="calculation-details"
+                  class="calculation-details"
+                  style="display: none"
+                ></div>
               </div>
               <div class="form-group">
                 <label for="service-fee">服務費 (NT$)</label>
@@ -803,6 +885,7 @@
       </div>
     </div>
 
+    <!-- 保留原有的內嵌 JavaScript，確保相容性 -->
     <script>
       // 全域變數
       let currentParcel = null;
@@ -963,7 +1046,7 @@
           });
       }
 
-      // 計算材積
+      // 計算材積（使用傢俱計算器公式）
       function calculateCBM() {
         const length =
           parseFloat(document.getElementById("actual-length").value) || 0;
@@ -973,7 +1056,9 @@
           parseFloat(document.getElementById("actual-height").value) || 0;
 
         if (length > 0 && width > 0 && height > 0) {
-          const cbm = (length * width * height) / 1000000;
+          // 使用傢俱計算器的公式
+          const volume = (length * width * height) / 28317; // 材積
+          const cbm = volume / 35.3; // CBM
           document.getElementById("actual-cbm").value = cbm.toFixed(4) + " m³";
         } else {
           document.getElementById("actual-cbm").value = "";
@@ -1030,12 +1115,18 @@
           return;
         }
 
-        // 準備資料
+        // 準備資料（包含家具類型和配送地區）
+        const furnitureType = document.getElementById("furniture-type").value;
+        const deliveryLocation =
+          document.getElementById("delivery-location").value;
+
         const data = {
           actualWeight: weight,
           actualLength: length,
           actualWidth: width,
           actualHeight: height,
+          furnitureType: furnitureType,
+          deliveryLocation: deliveryLocation,
           protectionNeeded:
             document.getElementById("protection-needed").checked,
           protectionPrice:
@@ -1150,6 +1241,11 @@
           });
           document.getElementById("protection-needed").checked = false;
           document.getElementById("protection-details").style.display = "none";
+          // 隱藏計算明細
+          const detailsDiv = document.getElementById("calculation-details");
+          if (detailsDiv) {
+            detailsDiv.style.display = "none";
+          }
           updatePriceSummary();
         }
       }
