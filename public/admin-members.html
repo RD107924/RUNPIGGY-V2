@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>會員管理 - 管理後台</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* 統計卡片 */
+      .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-card h3 {
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        font-weight: normal;
+      }
+
+      .stat-card .number {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1a73e8;
+        margin: 0;
+      }
+
+      .stat-card.total .number {
+        color: #1a73e8;
+      }
+      .stat-card.active .number {
+        color: #34a853;
+      }
+      .stat-card.inactive .number {
+        color: #ea4335;
+      }
+      .stat-card.new .number {
+        color: #fbbc04;
+      }
+
+      /* 篩選區域 */
+      .filters-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .filters {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .filters input[type="text"] {
+        flex: 1;
+        min-width: 250px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+
+      .filters select {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        min-width: 150px;
+      }
+
+      .filter-btn {
+        padding: 10px 20px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      .filter-btn:hover {
+        background: #1557c0;
+      }
+
+      /* 會員表格 */
+      .members-table-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+        overflow-x: auto;
+      }
+
+      .members-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+      }
+
+      .members-table thead {
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+      }
+
+      .members-table th {
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #495057;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .members-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+        color: #212529;
+        font-size: 14px;
+      }
+
+      .members-table tbody tr:hover {
+        background: #f8f9fa;
+      }
+
+      /* 狀態標籤 */
+      .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .status-badge.active {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .status-badge.needs-reset {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      /* 操作按鈕 */
+      .action-buttons {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+
+      .btn-action {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: opacity 0.2s;
+      }
+
+      .btn-action:hover {
+        opacity: 0.8;
+      }
+
+      .btn-view {
+        background: #17a2b8;
+        color: white;
+      }
+
+      .btn-edit {
+        background: #28a745;
+        color: white;
+      }
+
+      .btn-reset-password {
+        background: #ffc107;
+        color: #212529;
+      }
+
+      .btn-toggle-status {
+        background: #6c757d;
+        color: white;
+      }
+
+      .btn-toggle-status.activate {
+        background: #28a745;
+      }
+
+      /* Modal 樣式 */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s;
+      }
+
+      .modal.active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideIn 0.3s;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        color: #333;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #999;
+      }
+
+      .modal-close:hover {
+        color: #333;
+      }
+
+      /* 會員詳情 */
+      .member-detail {
+        margin-bottom: 20px;
+      }
+
+      .detail-row {
+        display: flex;
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .detail-label {
+        flex: 0 0 120px;
+        font-weight: 600;
+        color: #666;
+      }
+
+      .detail-value {
+        flex: 1;
+        color: #333;
+      }
+
+      /* 訂單歷史 */
+      .order-history {
+        margin-top: 20px;
+      }
+
+      .order-history h3 {
+        color: #333;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e0e0e0;
+      }
+
+      .order-item {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+      }
+
+      .order-item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+      }
+
+      .order-date {
+        color: #666;
+        font-size: 12px;
+      }
+
+      .order-status {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: #e3f2fd;
+        color: #1976d2;
+      }
+
+      /* 頁首操作 */
+      .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn-export {
+        background: #28a745;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .btn-back {
+        background: #6c757d;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      /* 動畫 */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-30px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* 載入動畫 */
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #1a73e8;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* 響應式設計 */
+      @media (max-width: 768px) {
+        .filters {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .filters input[type="text"],
+        .filters select {
+          min-width: 100%;
+        }
+
+        .stats-container {
+          grid-template-columns: 1fr;
+        }
+
+        .modal-content {
+          padding: 20px;
+        }
+
+        .detail-row {
+          flex-direction: column;
+        }
+
+        .detail-label {
+          margin-bottom: 5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="calculator-container" style="max-width: 1400px">
+      <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
+
+      <div class="page-header">
+        <h1>會員管理系統</h1>
+        <div class="header-actions">
+          <button class="btn-export" onclick="exportMembers()">
+            匯出會員清單
+          </button>
+          <a href="/admin" class="btn-back">返回管理後台</a>
+        </div>
+      </div>
+
+      <!-- 統計卡片 -->
+      <div class="stats-container">
+        <div class="stat-card total">
+          <h3>總會員數</h3>
+          <p class="number" id="stats-total">0</p>
+        </div>
+        <div class="stat-card active">
+          <h3>啟用中會員</h3>
+          <p class="number" id="stats-active">0</p>
+        </div>
+        <div class="stat-card inactive">
+          <h3>停用會員</h3>
+          <p class="number" id="stats-inactive">0</p>
+        </div>
+        <div class="stat-card new">
+          <h3>本月新增</h3>
+          <p class="number" id="stats-new">0</p>
+        </div>
+      </div>
+
+      <!-- 篩選區域 -->
+      <div class="filters-container">
+        <div class="filters">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="搜尋姓名、Email、電話、LINE暱稱..."
+          />
+          <select id="filter-status">
+            <option value="">所有狀態</option>
+            <option value="active">啟用中</option>
+            <option value="inactive">已停用</option>
+            <option value="needs-reset">需重設密碼</option>
+          </select>
+          <select id="filter-sort">
+            <option value="newest">最新註冊</option>
+            <option value="oldest">最早註冊</option>
+            <option value="orders">訂單數量</option>
+            <option value="name">姓名排序</option>
+          </select>
+          <button class="filter-btn" onclick="applyFilters()">套用篩選</button>
+          <button
+            class="filter-btn"
+            style="background: #6c757d"
+            onclick="resetFilters()"
+          >
+            清除
+          </button>
+        </div>
+      </div>
+
+      <!-- 會員列表 -->
+      <div class="members-table-container">
+        <table class="members-table">
+          <thead>
+            <tr>
+              <th>會員ID</th>
+              <th>姓名</th>
+              <th>Email</th>
+              <th>電話</th>
+              <th>LINE暱稱</th>
+              <th>註冊日期</th>
+              <th>訂單數</th>
+              <th>狀態</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="membersTableBody">
+            <tr>
+              <td colspan="9" class="loading">
+                <div class="spinner"></div>
+                <p>載入會員資料中...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 會員詳情 Modal -->
+    <div id="memberDetailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>會員詳細資料</h2>
+          <button class="modal-close" onclick="closeMemberDetail()">
+            &times;
+          </button>
+        </div>
+        <div id="memberDetailContent">
+          <!-- 動態內容 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 密碼重設確認 Modal -->
+    <div id="resetPasswordModal" class="modal">
+      <div class="modal-content" style="max-width: 400px">
+        <div class="modal-header">
+          <h2>確認重設密碼</h2>
+          <button class="modal-close" onclick="closeResetModal()">
+            &times;
+          </button>
+        </div>
+        <div style="padding: 20px 0">
+          <p id="resetConfirmText">
+            確定要將此會員的密碼重設為 <strong>8888</strong> 嗎？
+          </p>
+          <p style="color: #666; font-size: 14px; margin-top: 10px">
+            會員需要使用新密碼登入，建議通知會員儘快修改密碼。
+          </p>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button class="filter-btn" onclick="confirmResetPassword()">
+              確認重設
+            </button>
+            <button
+              class="filter-btn"
+              style="background: #6c757d"
+              onclick="closeResetModal()"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 全域變數
+      let allMembers = [];
+      let filteredMembers = [];
+      let currentMemberId = null;
+      const token = localStorage.getItem("authToken");
+
+      // 檢查登入狀態
+      if (!token) {
+        alert("請先登入");
+        window.location.href = "/login.html";
+      }
+
+      // 頁面載入時初始化
+      document.addEventListener("DOMContentLoaded", () => {
+        loadStats();
+        loadMembers();
+
+        // 綁定 Enter 鍵搜尋
+        document
+          .getElementById("search-input")
+          .addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+              applyFilters();
+            }
+          });
+      });
+
+      // 載入統計資料
+      async function loadStats() {
+        try {
+          const response = await fetch("/api/admin/customers/stats", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const stats = await response.json();
+            document.getElementById("stats-total").textContent =
+              stats.total || 0;
+            document.getElementById("stats-active").textContent =
+              stats.active || 0;
+            document.getElementById("stats-inactive").textContent =
+              stats.inactive || 0;
+            document.getElementById("stats-new").textContent =
+              stats.newThisMonth || 0;
+          }
+        } catch (error) {
+          console.error("載入統計資料失敗:", error);
+        }
+      }
+
+      // 載入會員列表
+      async function loadMembers() {
+        try {
+          const response = await fetch("/api/admin/customers", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            allMembers = await response.json();
+            filteredMembers = [...allMembers];
+            renderMembers();
+          } else {
+            throw new Error("載入失敗");
+          }
+        } catch (error) {
+          console.error("載入會員列表失敗:", error);
+          document.getElementById("membersTableBody").innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #dc3545;">
+                            載入會員資料失敗，請重新整理頁面
+                        </td>
+                    </tr>
+                `;
+        }
+      }
+
+      // 渲染會員列表
+      function renderMembers() {
+        const tbody = document.getElementById("membersTableBody");
+
+        if (filteredMembers.length === 0) {
+          tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #666;">
+                            沒有找到符合條件的會員
+                        </td>
+                    </tr>
+                `;
+          return;
+        }
+
+        tbody.innerHTML = filteredMembers
+          .map(
+            (member) => `
+                <tr>
+                    <td>${member.id.substring(0, 8)}...</td>
+                    <td><strong>${member.name || "-"}</strong></td>
+                    <td>${member.email}</td>
+                    <td>${member.phone || "-"}</td>
+                    <td>${member.lineNickname || "-"}</td>
+                    <td>${new Date(member.createdAt).toLocaleDateString(
+                      "zh-TW"
+                    )}</td>
+                    <td style="text-align: center;">
+                        <span style="color: #1a73e8; font-weight: bold;">
+                            ${member._count?.orders || 0}
+                        </span>
+                    </td>
+                    <td>
+                        ${getStatusBadge(member)}
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-view" onclick="viewMemberDetail('${
+                              member.id
+                            }')">
+                                查看
+                            </button>
+                            <button class="btn-action btn-reset-password" onclick="resetPassword('${
+                              member.id
+                            }', '${member.name}')">
+                                重設密碼
+                            </button>
+                            <button class="btn-action btn-toggle-status ${
+                              member.isActive ? "" : "activate"
+                            }" 
+                                onclick="toggleStatus('${
+                                  member.id
+                                }', ${!member.isActive})">
+                                ${member.isActive ? "停用" : "啟用"}
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `
+          )
+          .join("");
+      }
+
+      // 取得狀態標籤
+      function getStatusBadge(member) {
+        const badges = [];
+
+        if (member.isActive) {
+          badges.push('<span class="status-badge active">啟用</span>');
+        } else {
+          badges.push('<span class="status-badge inactive">停用</span>');
+        }
+
+        if (member.needPasswordChange) {
+          badges.push('<span class="status-badge needs-reset">需改密碼</span>');
+        }
+
+        return badges.join(" ");
+      }
+
+      // 套用篩選
+      function applyFilters() {
+        const searchTerm = document
+          .getElementById("search-input")
+          .value.toLowerCase();
+        const statusFilter = document.getElementById("filter-status").value;
+        const sortBy = document.getElementById("filter-sort").value;
+
+        // 篩選
+        filteredMembers = allMembers.filter((member) => {
+          // 搜尋條件
+          if (searchTerm) {
+            const searchMatch =
+              (member.name && member.name.toLowerCase().includes(searchTerm)) ||
+              (member.email &&
+                member.email.toLowerCase().includes(searchTerm)) ||
+              (member.phone && member.phone.includes(searchTerm)) ||
+              (member.lineNickname &&
+                member.lineNickname.toLowerCase().includes(searchTerm));
+
+            if (!searchMatch) return false;
+          }
+
+          // 狀態篩選
+          if (statusFilter) {
+            if (statusFilter === "active" && !member.isActive) return false;
+            if (statusFilter === "inactive" && member.isActive) return false;
+            if (statusFilter === "needs-reset" && !member.needPasswordChange)
+              return false;
+          }
+
+          return true;
+        });
+
+        // 排序
+        filteredMembers.sort((a, b) => {
+          switch (sortBy) {
+            case "newest":
+              return new Date(b.createdAt) - new Date(a.createdAt);
+            case "oldest":
+              return new Date(a.createdAt) - new Date(b.createdAt);
+            case "orders":
+              return (b._count?.orders || 0) - (a._count?.orders || 0);
+            case "name":
+              return (a.name || "").localeCompare(b.name || "");
+            default:
+              return new Date(b.createdAt) - new Date(a.createdAt);
+          }
+        });
+
+        renderMembers();
+      }
+
+      // 清除篩選
+      function resetFilters() {
+        document.getElementById("search-input").value = "";
+        document.getElementById("filter-status").value = "";
+        document.getElementById("filter-sort").value = "newest";
+        filteredMembers = [...allMembers];
+        renderMembers();
+      }
+
+      // 查看會員詳情
+      async function viewMemberDetail(memberId) {
+        try {
+          const response = await fetch(`/api/admin/customers/${memberId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const member = await response.json();
+            showMemberDetail(member);
+          }
+        } catch (error) {
+          console.error("載入會員詳情失敗:", error);
+          alert("載入會員詳情失敗");
+        }
+      }
+
+      // 顯示會員詳情
+      function showMemberDetail(member) {
+        const modal = document.getElementById("memberDetailModal");
+        const content = document.getElementById("memberDetailContent");
+
+        content.innerHTML = `
+                <div class="member-detail">
+                    <div class="detail-row">
+                        <span class="detail-label">會員ID：</span>
+                        <span class="detail-value">${member.id}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">姓名：</span>
+                        <span class="detail-value">${member.name || "-"}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Email：</span>
+                        <span class="detail-value">${member.email}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">電話：</span>
+                        <span class="detail-value">${member.phone || "-"}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">LINE暱稱：</span>
+                        <span class="detail-value">${
+                          member.lineNickname || "-"
+                        }</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">預設地址：</span>
+                        <span class="detail-value">${
+                          member.defaultAddress || "-"
+                        }</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">身分證字號：</span>
+                        <span class="detail-value">${
+                          member.idNumber || "-"
+                        }</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">註冊時間：</span>
+                        <span class="detail-value">${new Date(
+                          member.createdAt
+                        ).toLocaleString("zh-TW")}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">最後更新：</span>
+                        <span class="detail-value">${new Date(
+                          member.updatedAt
+                        ).toLocaleString("zh-TW")}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">帳號狀態：</span>
+                        <span class="detail-value">
+                            ${
+                              member.isActive
+                                ? '<span style="color: #28a745;">啟用中</span>'
+                                : '<span style="color: #dc3545;">已停用</span>'
+                            }
+                        </span>
+                    </div>
+                </div>
+                
+                ${
+                  member.orders && member.orders.length > 0
+                    ? `
+                    <div class="order-history">
+                        <h3>最近訂單記錄（最多10筆）</h3>
+                        ${member.orders
+                          .map(
+                            (order) => `
+                            <div class="order-item">
+                                <div class="order-item-header">
+                                    <span class="order-date">
+                                        ${new Date(
+                                          order.createdAt
+                                        ).toLocaleString("zh-TW")}
+                                    </span>
+                                    <span class="order-status">
+                                        ${getOrderStatusText(order.status)}
+                                    </span>
+                                </div>
+                                <div style="color: #666; font-size: 13px;">
+                                    收件人：${order.recipientName} | 
+                                    地址：${order.address.substring(0, 20)}...
+                                </div>
+                            </div>
+                        `
+                          )
+                          .join("")}
+                    </div>
+                `
+                    : '<p style="text-align: center; color: #999; margin-top: 20px;">尚無訂單記錄</p>'
+                }
+            `;
+
+        modal.classList.add("active");
+      }
+
+      // 關閉會員詳情
+      function closeMemberDetail() {
+        document.getElementById("memberDetailModal").classList.remove("active");
+      }
+
+      // 取得訂單狀態文字
+      function getOrderStatusText(status) {
+        const statusMap = {
+          NEEDS_PURCHASE: "需採購",
+          PURCHASED: "已採購",
+          IN_WAREHOUSE: "已入庫",
+          NOT_IN_WAREHOUSE: "未入庫",
+          SHIPPED: "已發貨",
+          IN_CUSTOMS: "清關中",
+          DELIVERY_COMPLETE: "派送完成",
+        };
+        return statusMap[status] || status;
+      }
+
+      // 重設密碼
+      function resetPassword(memberId, memberName) {
+        currentMemberId = memberId;
+        const confirmText = document.getElementById("resetConfirmText");
+        confirmText.innerHTML = `確定要將 <strong>${memberName}</strong> 的密碼重設為 <strong>8888</strong> 嗎？`;
+        document.getElementById("resetPasswordModal").classList.add("active");
+      }
+
+      // 確認重設密碼
+      async function confirmResetPassword() {
+        if (!currentMemberId) return;
+
+        try {
+          const response = await fetch(
+            `/api/admin/customers/${currentMemberId}/reset-password`,
+            {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.ok) {
+            const result = await response.json();
+            alert(
+              `密碼已重設成功！\n新密碼：${result.temporaryPassword}\n請通知會員使用新密碼登入`
+            );
+            closeResetModal();
+            loadMembers(); // 重新載入列表
+          } else {
+            const error = await response.json();
+            alert(error.error || "重設密碼失敗");
+          }
+        } catch (error) {
+          console.error("重設密碼失敗:", error);
+          alert("重設密碼時發生錯誤");
+        }
+      }
+
+      // 關閉重設密碼確認
+      function closeResetModal() {
+        document
+          .getElementById("resetPasswordModal")
+          .classList.remove("active");
+        currentMemberId = null;
+      }
+
+      // 切換會員狀態
+      async function toggleStatus(memberId, newStatus) {
+        const action = newStatus ? "啟用" : "停用";
+        if (!confirm(`確定要${action}此會員帳號嗎？`)) return;
+
+        try {
+          const response = await fetch(
+            `/api/admin/customers/${memberId}/status`,
+            {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ isActive: newStatus }),
+            }
+          );
+
+          if (response.ok) {
+            alert(`會員帳號已${action}`);
+            loadMembers(); // 重新載入列表
+            loadStats(); // 更新統計
+          } else {
+            throw new Error("操作失敗");
+          }
+        } catch (error) {
+          console.error("切換狀態失敗:", error);
+          alert("操作失敗，請稍後再試");
+        }
+      }
+
+      // 匯出會員清單
+      function exportMembers() {
+        if (filteredMembers.length === 0) {
+          alert("沒有可匯出的會員資料");
+          return;
+        }
+
+        // 準備CSV內容
+        const headers = [
+          "會員ID",
+          "姓名",
+          "Email",
+          "電話",
+          "LINE暱稱",
+          "地址",
+          "身分證字號",
+          "註冊日期",
+          "訂單數",
+          "狀態",
+        ];
+        const rows = filteredMembers.map((member) => [
+          member.id,
+          member.name || "",
+          member.email,
+          member.phone || "",
+          member.lineNickname || "",
+          member.defaultAddress || "",
+          member.idNumber || "",
+          new Date(member.createdAt).toLocaleDateString("zh-TW"),
+          member._count?.orders || 0,
+          member.isActive ? "啟用" : "停用",
+        ]);
+
+        // 建立CSV字串（加入BOM以支援Excel中文）
+        const BOM = "\uFEFF";
+        const csvContent =
+          BOM +
+          headers.join(",") +
+          "\n" +
+          rows
+            .map((row) =>
+              row
+                .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+                .join(",")
+            )
+            .join("\n");
+
+        // 下載檔案
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `會員清單_${new Date().toISOString().split("T")[0]}.csv`
+        );
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // ESC 鍵關閉 Modal
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeMemberDetail();
+          closeResetModal();
+        }
+      });
+    </script>
+  </body>
+</html>

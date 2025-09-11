@@ -1,4 +1,4 @@
-// adminRoutes.js (SQLite 相容版本)
+// adminRoutes.js (完整版會員管理功能)
 require("dotenv").config(); // 確保讀取環境變數
 
 const express = require("express");
@@ -20,29 +20,58 @@ const OrderStatus = {
 
 // === 員工管理 ===
 router.post("/register", async (req, res) => {
-  const { username, password, role } = req.body;
-  if (!username || !password)
+  const { username, password, role, fullName, email, phone, department } =
+    req.body;
+
+  if (!username || !password) {
     return res.status(400).json({ error: "請提供帳號密碼" });
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash(password, salt);
+  }
+
   try {
-    const user = await prisma.user.create({
-      data: { username, passwordHash, role: role || "OPERATOR" },
+    // 檢查帳號是否已存在
+    const existingUser = await prisma.user.findUnique({
+      where: { username },
     });
-    res
-      .status(201)
-      .json({ id: user.id, username: user.username, role: user.role });
+
+    if (existingUser) {
+      return res.status(400).json({ error: "帳號已存在" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const user = await prisma.user.create({
+      data: {
+        username,
+        passwordHash,
+        role: role || "OPERATOR",
+        fullName,
+        email,
+        phone,
+        department,
+      },
+    });
+
+    res.status(201).json({
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      fullName: user.fullName,
+    });
   } catch (error) {
-    res.status(400).json({ error: "帳號已存在" });
+    console.error("註冊員工失敗:", error);
+    res.status(500).json({ error: "註冊失敗，請稍後再試" });
   }
 });
 
-// === 統計資料 (加入會員統計) ===
+// === 統計資料 (完整版) ===
 router.get("/stats", async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
 
     const [
       newOrdersToday,
@@ -51,24 +80,37 @@ router.get("/stats", async (req, res) => {
       userCount,
       customerCount,
       activeCustomerCount,
+      ordersThisWeek,
+      servicesNeedQuote,
     ] = await Promise.all([
       prisma.shipmentOrder.count({ where: { createdAt: { gte: today } } }),
       prisma.shipmentOrder.count({ where: { status: "NEEDS_PURCHASE" } }),
       prisma.shipmentOrder.count({
         where: { createdAt: { gte: startOfMonth } },
       }),
-      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
       prisma.customer.count(),
       prisma.customer.count({ where: { isActive: true } }),
+      prisma.shipmentOrder.count({
+        where: { createdAt: { gte: startOfWeek } },
+      }),
+      prisma.shipmentOrder.count({
+        where: {
+          additionalServices: { not: null },
+          serviceQuoted: false,
+        },
+      }),
     ]);
 
     res.json({
       newOrdersToday,
       pendingOrders,
       totalOrdersThisMonth,
+      ordersThisWeek,
       userCount,
       customerCount,
       activeCustomerCount,
+      servicesNeedQuote,
     });
   } catch (error) {
     console.error("獲取統計數據失敗:", error);
@@ -80,17 +122,24 @@ router.get("/stats", async (req, res) => {
 router.get("/orders", async (req, res) => {
   console.log("收到獲取訂單的請求，開始查詢資料庫...");
   try {
-    const { status, assignedToId, search, customerId } = req.query;
+    const { status, assignedToId, search, customerId, hasServices } = req.query;
     const whereClause = {};
 
     if (status) whereClause.status = status;
     if (assignedToId) whereClause.assignedToId = assignedToId;
     if (customerId) whereClause.customerId = customerId;
+
+    // 加值服務篩選
+    if (hasServices === "true") {
+      whereClause.additionalServices = { not: null };
+    }
+
     if (search) {
       whereClause.OR = [
         { recipientName: { contains: search } },
         { phone: { contains: search } },
         { lineNickname: { contains: search } },
+        { email: { contains: search } },
       ];
     }
 
@@ -98,7 +147,13 @@ router.get("/orders", async (req, res) => {
       where: whereClause,
       orderBy: { createdAt: "desc" },
       include: {
-        assignedTo: { select: { username: true } },
+        assignedTo: {
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+          },
+        },
         customer: {
           select: {
             id: true,
@@ -106,6 +161,7 @@ router.get("/orders", async (req, res) => {
             email: true,
             phone: true,
             lineNickname: true,
+            memberLevel: true,
           },
         },
       },
@@ -113,13 +169,17 @@ router.get("/orders", async (req, res) => {
 
     console.log(`查詢成功！在資料庫中找到了 ${ordersFromDb.length} 筆訂單。`);
 
-    // 解析 JSON 字串
+    // 解析 JSON 字串並處理加值服務
     const ordersWithParsedJson = ordersFromDb.map((order) => ({
       ...order,
       calculationResult:
         typeof order.calculationResult === "string"
           ? JSON.parse(order.calculationResult)
           : order.calculationResult,
+      additionalServices:
+        order.additionalServices && typeof order.additionalServices === "string"
+          ? JSON.parse(order.additionalServices)
+          : order.additionalServices,
     }));
 
     res.json(ordersWithParsedJson);
@@ -129,54 +189,162 @@ router.get("/orders", async (req, res) => {
   }
 });
 
-// === 會員管理 API ===
+// === 會員管理 API (完整版) ===
 
-// 取得所有會員列表
+// 取得會員統計資料
+router.get("/customers/stats", async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const [total, active, inactive, newThisMonth, withOrders] =
+      await Promise.all([
+        prisma.customer.count(),
+        prisma.customer.count({ where: { isActive: true } }),
+        prisma.customer.count({ where: { isActive: false } }),
+        prisma.customer.count({ where: { createdAt: { gte: startOfMonth } } }),
+        prisma.customer.count({
+          where: {
+            orders: {
+              some: {},
+            },
+          },
+        }),
+      ]);
+
+    // 會員等級統計（如果資料庫支援）
+    let levelStats = {};
+    try {
+      const levels = await prisma.customer.groupBy({
+        by: ["memberLevel"],
+        _count: true,
+      });
+      levels.forEach((level) => {
+        levelStats[level.memberLevel || "BASIC"] = level._count;
+      });
+    } catch (e) {
+      // 如果欄位不存在，使用預設值
+      levelStats = { BASIC: total };
+    }
+
+    res.json({
+      total,
+      active,
+      inactive,
+      newThisMonth,
+      withOrders,
+      levelStats,
+    });
+  } catch (error) {
+    console.error("取得會員統計失敗:", error);
+    res.status(500).json({ error: "取得統計資料失敗" });
+  }
+});
+
+// 取得所有會員列表（增強版）
 router.get("/customers", async (req, res) => {
   try {
-    const { search, isActive } = req.query;
+    const { search, isActive, sort, page = 1, limit = 50 } = req.query;
     const whereClause = {};
 
+    // 狀態篩選
     if (isActive !== undefined) {
       whereClause.isActive = isActive === "true";
     }
 
+    // 搜尋功能
     if (search) {
       whereClause.OR = [
         { name: { contains: search } },
         { email: { contains: search } },
         { phone: { contains: search } },
         { lineNickname: { contains: search } },
+        { idNumber: { contains: search } },
       ];
     }
 
-    const customers = await prisma.customer.findMany({
-      where: whereClause,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        lineNickname: true,
-        isActive: true,
-        needPasswordChange: true, // 新增：顯示是否需要修改密碼
-        passwordResetAt: true, // 新增：顯示密碼重設時間
-        createdAt: true,
-        _count: {
-          select: { orders: true },
+    // 排序設定
+    let orderBy = { createdAt: "desc" }; // 預設最新註冊
+    switch (sort) {
+      case "oldest":
+        orderBy = { createdAt: "asc" };
+        break;
+      case "name":
+        orderBy = { name: "asc" };
+        break;
+      case "email":
+        orderBy = { email: "asc" };
+        break;
+      case "orders":
+        // 需要特別處理
+        orderBy = { createdAt: "desc" };
+        break;
+    }
+
+    // 分頁計算
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // 查詢會員資料
+    const [customers, totalCount] = await Promise.all([
+      prisma.customer.findMany({
+        where: whereClause,
+        orderBy,
+        skip,
+        take,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          lineNickname: true,
+          defaultAddress: true,
+          idNumber: true,
+          taxId: true,
+          isActive: true,
+          emailVerified: true,
+          phoneVerified: true,
+          needPasswordChange: true,
+          passwordResetAt: true,
+          memberLevel: true,
+          points: true,
+          totalSpent: true,
+          lastLoginAt: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              orders: true,
+              parcelNotifications: true,
+            },
+          },
         },
+      }),
+      prisma.customer.count({ where: whereClause }),
+    ]);
+
+    // 如果需要按訂單數排序，在記憶體中處理
+    if (sort === "orders") {
+      customers.sort((a, b) => b._count.orders - a._count.orders);
+    }
+
+    res.json({
+      customers,
+      pagination: {
+        total: totalCount,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(totalCount / parseInt(limit)),
       },
     });
-
-    res.json(customers);
   } catch (error) {
     console.error("查詢會員失敗:", error);
     res.status(500).json({ error: "查詢會員時發生錯誤" });
   }
 });
 
-// 取得單一會員詳細資料
+// 取得單一會員詳細資料（含訂單歷史）
 router.get("/customers/:id", async (req, res) => {
   try {
     const customer = await prisma.customer.findUnique({
@@ -184,7 +352,33 @@ router.get("/customers/:id", async (req, res) => {
       include: {
         orders: {
           orderBy: { createdAt: "desc" },
-          take: 10, // 只取最近10筆訂單
+          take: 20, // 取最近20筆訂單
+          select: {
+            id: true,
+            recipientName: true,
+            address: true,
+            phone: true,
+            email: true,
+            status: true,
+            totalAmount: true,
+            paymentStatus: true,
+            createdAt: true,
+            completedAt: true,
+            calculationResult: true,
+            additionalServices: true,
+            serviceQuoteAmount: true,
+          },
+        },
+        parcelNotifications: {
+          orderBy: { createdAt: "desc" },
+          take: 10, // 取最近10筆包裹預報
+          select: {
+            id: true,
+            trackingNumber: true,
+            productName: true,
+            status: true,
+            createdAt: true,
+          },
         },
       },
     });
@@ -202,12 +396,35 @@ router.get("/customers/:id", async (req, res) => {
           typeof order.calculationResult === "string"
             ? JSON.parse(order.calculationResult)
             : order.calculationResult,
+        additionalServices:
+          order.additionalServices &&
+          typeof order.additionalServices === "string"
+            ? JSON.parse(order.additionalServices)
+            : order.additionalServices,
       })),
     };
 
+    // 計算會員統計
+    const stats = {
+      totalOrders: customer.orders.length,
+      completedOrders: customer.orders.filter(
+        (o) => o.status === "DELIVERY_COMPLETE"
+      ).length,
+      totalSpent: customer.orders.reduce(
+        (sum, o) => sum + (o.totalAmount || 0),
+        0
+      ),
+      totalParcels: customer.parcelNotifications.length,
+    };
+
     // 移除密碼欄位
-    const { passwordHash, ...customerData } = customerWithParsedOrders;
-    res.json(customerData);
+    const { passwordHash, passwordResetToken, ...customerData } =
+      customerWithParsedOrders;
+
+    res.json({
+      ...customerData,
+      stats,
+    });
   } catch (error) {
     console.error("查詢會員詳情失敗:", error);
     res.status(500).json({ error: "查詢會員詳情時發生錯誤" });
@@ -218,10 +435,14 @@ router.get("/customers/:id", async (req, res) => {
 router.put("/customers/:id/status", async (req, res) => {
   try {
     const { isActive } = req.body;
+    const customerId = req.params.id;
 
     const updatedCustomer = await prisma.customer.update({
-      where: { id: req.params.id },
-      data: { isActive },
+      where: { id: customerId },
+      data: {
+        isActive,
+        updatedAt: new Date(),
+      },
       select: {
         id: true,
         name: true,
@@ -229,6 +450,35 @@ router.put("/customers/:id/status", async (req, res) => {
         isActive: true,
       },
     });
+
+    // 記錄操作日誌
+    console.log(
+      `[會員狀態變更] ${new Date().toISOString()} - 管理員 ${
+        req.user.username
+      } ` +
+        `將會員 ${updatedCustomer.email} 狀態變更為 ${
+          isActive ? "啟用" : "停用"
+        }`
+    );
+
+    // 嘗試記錄審計日誌
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: "CUSTOMER_STATUS_CHANGE",
+          targetType: "CUSTOMER",
+          targetId: customerId,
+          performedById: req.user.id,
+          details: JSON.stringify({
+            customerEmail: updatedCustomer.email,
+            newStatus: isActive ? "ACTIVE" : "INACTIVE",
+            changedAt: new Date(),
+          }),
+        },
+      });
+    } catch (e) {
+      // 審計日誌表可能不存在，忽略錯誤
+    }
 
     res.json({
       message: `會員已${isActive ? "啟用" : "停用"}`,
@@ -240,20 +490,18 @@ router.put("/customers/:id/status", async (req, res) => {
   }
 });
 
-// === 新增：密碼重設功能 ===
-
-// 重設會員密碼為預設密碼（只有管理員可以執行）
+// 重設會員密碼為 8888
 router.put("/customers/:id/reset-password", async (req, res) => {
   try {
     const customerId = req.params.id;
-    const DEFAULT_PASSWORD = "88888888"; // 預設密碼
+    const DEFAULT_PASSWORD = "8888"; // 您要求的預設密碼
 
     // 確認執行者是管理員角色
-    if (req.user.role !== "ADMIN") {
+    if (req.user.role !== "ADMIN" && req.user.role !== "SUPER_ADMIN") {
       console.log(
         `[密碼重設拒絕] ${new Date().toISOString()} - 使用者 ${
           req.user.username
-        } (角色: ${req.user.role}) 嘗試重設會員密碼但權限不足`
+        } ` + `(角色: ${req.user.role}) 嘗試重設會員密碼但權限不足`
       );
       return res.status(403).json({
         error: "只有管理員可以重設會員密碼",
@@ -298,10 +546,14 @@ router.put("/customers/:id/reset-password", async (req, res) => {
         passwordHash,
         needPasswordChange: true, // 標記需要修改密碼
         passwordResetAt: new Date(), // 記錄重設時間
+        passwordResetToken: null, // 清除任何重設令牌
+        passwordResetExpiry: null,
+        loginAttempts: 0, // 重設登入嘗試次數
+        lockedUntil: null, // 解除帳號鎖定
       },
     });
 
-    // 如果有 AuditLog 表，記錄審計日誌（可選）
+    // 嘗試記錄審計日誌
     try {
       await prisma.auditLog.create({
         data: {
@@ -315,12 +567,11 @@ router.put("/customers/:id/reset-password", async (req, res) => {
             resetAt: new Date(),
             adminUsername: req.user.username,
           }),
-          ipAddress: req.ip || req.connection.remoteAddress,
+          ipAddress: req.ip || req.connection?.remoteAddress,
           userAgent: req.headers["user-agent"],
         },
       });
     } catch (auditError) {
-      // 如果沒有 AuditLog 表，只記錄到 console
       console.log(`[審計日誌] 無法寫入資料庫: ${auditError.message}`);
     }
 
@@ -328,7 +579,7 @@ router.put("/customers/:id/reset-password", async (req, res) => {
     console.log(
       `[密碼重設成功] ${new Date().toISOString()} - 管理員 ${
         req.user.username
-      } (ID: ${req.user.id}) 已將會員 ${customer.email} 的密碼重設為預設值`
+      } ` + `(ID: ${req.user.id}) 已將會員 ${customer.email} 的密碼重設為預設值`
     );
 
     res.json({
@@ -339,8 +590,8 @@ router.put("/customers/:id/reset-password", async (req, res) => {
         email: customer.email,
         name: customer.name,
       },
-      temporaryPassword: DEFAULT_PASSWORD, // 只顯示給管理員看
-      note: "請通知會員使用預設密碼 88888888 登入，並建議立即修改密碼",
+      temporaryPassword: DEFAULT_PASSWORD,
+      note: "請通知會員使用預設密碼 8888 登入，並建議立即修改密碼",
     });
   } catch (error) {
     console.error("重設密碼失敗:", error);
@@ -348,49 +599,149 @@ router.put("/customers/:id/reset-password", async (req, res) => {
   }
 });
 
-// 查詢特定會員的密碼重設記錄（如果有 AuditLog 表）
-router.get("/customers/:id/password-reset-history", async (req, res) => {
+// 批量匯出會員資料（CSV格式）
+router.get("/customers/export/csv", async (req, res) => {
+  try {
+    // 檢查權限
+    if (req.user.role !== "ADMIN" && req.user.role !== "SUPER_ADMIN") {
+      return res.status(403).json({ error: "只有管理員可以匯出會員資料" });
+    }
+
+    const customers = await prisma.customer.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        lineNickname: true,
+        defaultAddress: true,
+        idNumber: true,
+        taxId: true,
+        isActive: true,
+        emailVerified: true,
+        memberLevel: true,
+        points: true,
+        totalSpent: true,
+        createdAt: true,
+        _count: {
+          select: { orders: true },
+        },
+      },
+    });
+
+    // 建立CSV內容
+    const headers = [
+      "會員ID",
+      "姓名",
+      "Email",
+      "電話",
+      "LINE暱稱",
+      "地址",
+      "身分證字號",
+      "統一編號",
+      "會員等級",
+      "積分",
+      "總消費",
+      "註冊日期",
+      "訂單數",
+      "狀態",
+      "Email驗證",
+    ];
+
+    const rows = customers.map((c) => [
+      c.id,
+      c.name || "",
+      c.email,
+      c.phone || "",
+      c.lineNickname || "",
+      c.defaultAddress || "",
+      c.idNumber || "",
+      c.taxId || "",
+      c.memberLevel || "BASIC",
+      c.points || 0,
+      c.totalSpent || 0,
+      new Date(c.createdAt).toLocaleDateString("zh-TW"),
+      c._count.orders,
+      c.isActive ? "啟用" : "停用",
+      c.emailVerified ? "已驗證" : "未驗證",
+    ]);
+
+    // 組合CSV字串
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // 設定回應標頭
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=members_${Date.now()}.csv`
+    );
+
+    // 加入BOM以支援Excel中文
+    res.send("\uFEFF" + csvContent);
+  } catch (error) {
+    console.error("匯出會員資料失敗:", error);
+    res.status(500).json({ error: "匯出資料時發生錯誤" });
+  }
+});
+
+// 更新會員資料
+router.put("/customers/:id", async (req, res) => {
   try {
     const customerId = req.params.id;
+    const {
+      name,
+      phone,
+      lineNickname,
+      defaultAddress,
+      idNumber,
+      taxId,
+      memberLevel,
+      points,
+      internalNote,
+    } = req.body;
 
-    // 嘗試查詢審計日誌
-    try {
-      const resetHistory = await prisma.auditLog.findMany({
-        where: {
-          action: "PASSWORD_RESET",
-          targetId: customerId,
-          targetType: "CUSTOMER",
-        },
-        include: {
-          performedBy: {
-            select: {
-              username: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 10, // 只顯示最近10筆
-      });
+    const updatedCustomer = await prisma.customer.update({
+      where: { id: customerId },
+      data: {
+        name,
+        phone,
+        lineNickname,
+        defaultAddress,
+        idNumber,
+        taxId,
+        memberLevel,
+        points: points ? parseInt(points) : undefined,
+        internalNote,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        lineNickname: true,
+        defaultAddress: true,
+        idNumber: true,
+        taxId: true,
+        memberLevel: true,
+        points: true,
+        internalNote: true,
+      },
+    });
 
-      res.json({
-        customerId,
-        resetHistory: resetHistory.map((log) => ({
-          resetAt: log.createdAt,
-          resetBy: log.performedBy.username,
-          details: JSON.parse(log.details || "{}"),
-        })),
-      });
-    } catch (auditError) {
-      // 如果沒有 AuditLog 表，返回空記錄
-      res.json({
-        customerId,
-        resetHistory: [],
-        message: "審計日誌功能尚未啟用",
-      });
-    }
+    res.json({
+      message: "會員資料更新成功",
+      customer: updatedCustomer,
+    });
   } catch (error) {
-    console.error("查詢密碼重設記錄失敗:", error);
-    res.status(500).json({ error: "查詢記錄時發生錯誤" });
+    console.error("更新會員資料失敗:", error);
+    res.status(500).json({ error: "更新會員資料時發生錯誤" });
   }
 });
 
@@ -405,8 +756,11 @@ router.post("/customers/:id/orders", async (req, res) => {
       recipientName,
       address,
       phone,
+      email,
       idNumber,
+      taxId,
       calculationResult,
+      additionalServices,
     } = req.body;
 
     // 確認會員存在
@@ -426,8 +780,13 @@ router.post("/customers/:id/orders", async (req, res) => {
         recipientName: recipientName || customer.name,
         address: address || customer.defaultAddress || "未提供",
         phone: phone || customer.phone || "未提供",
+        email: email || customer.email,
         idNumber: idNumber || customer.idNumber,
-        calculationResult: JSON.stringify(calculationResult), // 轉為 JSON 字串
+        taxId: taxId || customer.taxId,
+        calculationResult: JSON.stringify(calculationResult),
+        additionalServices: additionalServices
+          ? JSON.stringify(additionalServices)
+          : null,
         status: "NEEDS_PURCHASE",
       },
     });
@@ -436,7 +795,10 @@ router.post("/customers/:id/orders", async (req, res) => {
       message: "訂單建立成功",
       order: {
         ...newOrder,
-        calculationResult: JSON.parse(newOrder.calculationResult), // 回傳時解析
+        calculationResult: JSON.parse(newOrder.calculationResult),
+        additionalServices: newOrder.additionalServices
+          ? JSON.parse(newOrder.additionalServices)
+          : null,
       },
     });
   } catch (error) {
@@ -445,23 +807,45 @@ router.post("/customers/:id/orders", async (req, res) => {
   }
 });
 
+// 取得所有員工列表
 router.get("/users", async (req, res) => {
-  const users = await prisma.user.findMany({
-    select: { id: true, username: true },
-  });
-  res.json(users);
+  try {
+    const users = await prisma.user.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        role: true,
+        department: true,
+      },
+      orderBy: { username: "asc" },
+    });
+    res.json(users);
+  } catch (error) {
+    console.error("查詢員工失敗:", error);
+    res.status(500).json({ error: "查詢員工時發生錯誤" });
+  }
 });
 
+// 更新訂單狀態
 router.put("/orders/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
+
   if (!status || !Object.values(OrderStatus).includes(status)) {
     return res.status(400).json({ error: "無效的狀態" });
   }
+
   try {
     const updatedOrder = await prisma.shipmentOrder.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        updatedAt: new Date(),
+        completedAt: status === "DELIVERY_COMPLETE" ? new Date() : undefined,
+        cancelledAt: status === "CANCELLED" ? new Date() : undefined,
+      },
     });
     res.json(updatedOrder);
   } catch (e) {
@@ -469,13 +853,18 @@ router.put("/orders/:id/status", async (req, res) => {
   }
 });
 
+// 指派訂單給員工
 router.put("/orders/:id/assign", async (req, res) => {
   const { id } = req.params;
   const { userId } = req.body;
+
   try {
     const updatedOrder = await prisma.shipmentOrder.update({
       where: { id },
-      data: { assignedToId: userId || null },
+      data: {
+        assignedToId: userId || null,
+        updatedAt: new Date(),
+      },
     });
     res.json(updatedOrder);
   } catch (e) {
@@ -509,6 +898,7 @@ router.put("/orders/:id/service-quote", async (req, res) => {
       data: {
         serviceQuoteAmount: parseFloat(serviceQuoteAmount) || 0,
         serviceQuoted: serviceQuoted === true,
+        updatedAt: new Date(),
       },
     });
 
@@ -568,7 +958,6 @@ router.get("/orders/pending-quotes", async (req, res) => {
 // 批次更新服務報價
 router.post("/orders/batch-quote", async (req, res) => {
   const { orderQuotes } = req.body;
-  // orderQuotes 格式: [{ orderId: 'xxx', amount: 1000 }, ...]
 
   if (!Array.isArray(orderQuotes)) {
     return res.status(400).json({ error: "請提供有效的報價資料" });
@@ -583,6 +972,7 @@ router.post("/orders/batch-quote", async (req, res) => {
             data: {
               serviceQuoteAmount: parseFloat(amount) || 0,
               serviceQuoted: true,
+              updatedAt: new Date(),
             },
           });
         } catch (e) {
@@ -605,4 +995,5 @@ router.post("/orders/batch-quote", async (req, res) => {
     res.status(500).json({ error: "批次更新失敗" });
   }
 });
+
 module.exports = router;

@@ -121,6 +121,25 @@
         background-color: #7b1fa2;
       }
 
+      /* 新增會員管理按鈕樣式 */
+      .btn-members {
+        background-color: #17a2b8;
+        color: white;
+        padding: 12px 25px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+        margin-right: 10px;
+      }
+
+      .btn-members:hover {
+        background-color: #138496;
+      }
+
       /* 新增包裹預報統計卡片 */
       .parcel-stat-card {
         background-color: #f3e5f5;
@@ -133,6 +152,45 @@
 
       .parcel-stat-card p {
         color: #9c27b0;
+      }
+
+      /* 新增會員統計卡片 */
+      .member-stat-card {
+        background-color: #e3f2fd;
+        border: 1px solid #bbdefb;
+      }
+
+      .member-stat-card h4 {
+        color: #1565c0;
+      }
+
+      .member-stat-card p {
+        color: #1976d2;
+        font-weight: bold;
+        font-size: 24px;
+      }
+
+      /* 統計卡片容器調整 */
+      .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+
+      /* 頁首按鈕群組 */
+      .header-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      @media (max-width: 768px) {
+        .header-buttons {
+          width: 100%;
+          justify-content: center;
+        }
       }
     </style>
   </head>
@@ -150,19 +208,36 @@
         <img src="/assets/logo.png" alt="小跑豬 LOGO" class="header-logo" />
 
         <h1>訂單管理儀表板</h1>
-        <div>
+
+        <div class="header-buttons">
+          <!-- 會員管理按鈕 -->
+          <a
+            href="/admin-members.html"
+            class="btn btn-members"
+            style="text-decoration: none"
+          >
+            👥 會員管理
+          </a>
+
+          <!-- 包裹預報管理按鈕 -->
           <a
             href="/admin-parcels"
             class="btn btn-parcel"
             style="text-decoration: none"
-            >📦 包裹預報管理</a
           >
+            📦 包裹預報管理
+          </a>
+
+          <!-- 新增員工按鈕 -->
           <a
             href="/register.html"
             class="btn btn-add"
             style="text-decoration: none"
-            >新增員工</a
           >
+            新增員工
+          </a>
+
+          <!-- 登出按鈕 -->
           <button
             id="logoutBtn"
             class="btn"
@@ -173,6 +248,7 @@
         </div>
       </div>
 
+      <!-- 統計卡片區域 -->
       <div class="dashboard-stats">
         <div class="stat-card">
           <h4>今日新增訂單</h4>
@@ -194,8 +270,14 @@
           <h4>待確認包裹</h4>
           <p id="stats-parcels">0</p>
         </div>
+        <!-- 新增會員統計卡片 -->
+        <div class="stat-card member-stat-card">
+          <h4>總會員數</h4>
+          <p id="stats-members">0</p>
+        </div>
       </div>
 
+      <!-- 篩選區域 -->
       <div class="filters">
         <select id="filter-status">
           <option value="">所有進度</option>
@@ -216,6 +298,7 @@
         </div>
       </div>
 
+      <!-- 訂單列表表格 -->
       <div class="admin-table-wrapper" style="overflow-x: auto">
         <table class="rate-table">
           <thead>
@@ -235,6 +318,7 @@
       </div>
     </div>
 
+    <!-- 訂單詳情 Modal -->
     <div id="order-detail-modal" class="modal-overlay" style="display: none">
       <div class="modal-content">
         <button class="modal-close-btn">&times;</button>
@@ -244,30 +328,95 @@
     </div>
 
     <script>
-      // 在原有的 admin.js 之前，先載入包裹預報統計
+      // 頁面載入時的初始化
       document.addEventListener("DOMContentLoaded", async () => {
-        // 載入包裹預報統計（如果有 token）
+        const token = localStorage.getItem("authToken");
+
+        // 檢查登入狀態
+        if (!token) {
+          window.location.href = "/login.html";
+          return;
+        }
+
+        // 載入各項統計資料
+        loadAllStatistics();
+      });
+
+      // 載入所有統計資料
+      async function loadAllStatistics() {
+        const token = localStorage.getItem("authToken");
+
+        try {
+          // 1. 載入包裹預報統計
+          loadParcelStatistics(token);
+
+          // 2. 載入會員統計
+          loadMemberStatistics(token);
+
+          // 3. 載入訂單統計會在 admin.js 中處理
+        } catch (error) {
+          console.error("載入統計資料時發生錯誤:", error);
+        }
+      }
+
+      // 載入包裹預報統計
+      async function loadParcelStatistics(token) {
+        try {
+          const response = await fetch("/api/parcels/admin/stats", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const stats = await response.json();
+            const parcelsElement = document.getElementById("stats-parcels");
+            if (parcelsElement) {
+              parcelsElement.textContent = stats.pendingParcels || 0;
+            }
+          }
+        } catch (error) {
+          console.log("無法載入包裹預報統計");
+        }
+      }
+
+      // 載入會員統計
+      async function loadMemberStatistics(token) {
+        try {
+          const response = await fetch("/api/admin/customers/stats", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const stats = await response.json();
+            const membersElement = document.getElementById("stats-members");
+            if (membersElement) {
+              membersElement.textContent = stats.total || 0;
+
+              // 可選：顯示更詳細的會員統計提示
+              membersElement.title = `啟用: ${stats.active || 0} | 停用: ${
+                stats.inactive || 0
+              } | 本月新增: ${stats.newThisMonth || 0}`;
+            }
+          }
+        } catch (error) {
+          console.log("無法載入會員統計");
+        }
+      }
+
+      // 定期更新統計資料（每30秒）
+      setInterval(() => {
         const token = localStorage.getItem("authToken");
         if (token) {
-          try {
-            const response = await fetch("/api/parcels/admin/stats", {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-            if (response.ok) {
-              const stats = await response.json();
-              const parcelsElement = document.getElementById("stats-parcels");
-              if (parcelsElement) {
-                parcelsElement.textContent = stats.pendingParcels || 0;
-              }
-            }
-          } catch (error) {
-            console.log("無法載入包裹預報統計");
-          }
+          loadParcelStatistics(token);
+          loadMemberStatistics(token);
         }
-      });
+      }, 30000);
     </script>
+
+    <!-- 載入主要的 admin.js -->
     <script src="admin.js"></script>
   </body>
 </html>
