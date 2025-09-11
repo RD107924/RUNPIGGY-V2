@@ -163,7 +163,7 @@
     const furnitureType = furnitureTypeEl ? furnitureTypeEl.value : "general";
     const rateInfo = rates[furnitureType];
 
-    // 計算材積
+    // 計算材積（向上取整）
     const singleVolume = Math.ceil((length * width * height) / VOLUME_DIVISOR);
     const cbm = singleVolume / CBM_TO_CAI_FACTOR;
 
@@ -217,7 +217,7 @@
         remoteFee: Math.round(remoteFee),
         totalShippingFee: Math.round(totalShippingFee),
         feeNotes: feeNotes,
-        singleVolume: singleVolume.toFixed(4),
+        singleVolume: singleVolume,
         cbm: cbm.toFixed(4),
         furnitureType: rateInfo.name,
       });
@@ -588,11 +588,11 @@
       protectionCheckbox.addEventListener("change", handleProtectionToggle);
     }
 
-    // 轉換按鈕
-    const convertBtn = document.getElementById("btn-convert");
-    if (convertBtn) {
-      convertBtn.addEventListener("click", handleConvertToOrder);
-    }
+    // 轉換按鈕 - 移除這裡的事件監聽器，因為會由 onclick 處理
+    // const convertBtn = document.getElementById("btn-convert");
+    // if (convertBtn) {
+    //   convertBtn.addEventListener("click", handleConvertToOrder);
+    // }
 
     // 重置按鈕
     const resetBtn = document.querySelector('[onclick="resetForm()"]');
@@ -745,6 +745,11 @@
     }
 
     // 確認對話框
+    if (!currentParcel) {
+      showAlert("error", "包裹資料未載入");
+      return;
+    }
+
     const confirmMessage = `
 確定要將此包裹轉換為正式訂單嗎？
 
@@ -876,6 +881,11 @@
     const furnitureTypeEl = document.getElementById("furniture-type");
     const deliveryLocationEl = document.getElementById("delivery-location");
 
+    // 計算材積（向上取整）
+    const volumeRaw = (length * width * height) / VOLUME_DIVISOR;
+    const volume = Math.ceil(volumeRaw);
+    const cbm = volume / CBM_TO_CAI_FACTOR;
+
     const calculationData = {
       weight: weight,
       length: length,
@@ -883,8 +893,8 @@
       height: height,
       furnitureType: furnitureTypeEl ? furnitureTypeEl.value : "general",
       deliveryLocation: deliveryLocationEl ? deliveryLocationEl.value : "0",
-      volume: (length * width * height) / VOLUME_DIVISOR,
-      cbm: (length * width * height) / VOLUME_DIVISOR / CBM_TO_CAI_FACTOR,
+      volume: volume,
+      cbm: cbm.toFixed(4),
     };
 
     return {
@@ -1066,7 +1076,11 @@
   window.copyShareLink = handleCopyShareLink;
   window.viewOrder = handleViewOrder;
   window.createAnother = handleCreateAnother;
-  window.convertToOrder = handleConvertToOrder;
+
+  // 修正：確保 convertToOrder 正確呼叫 handleConvertToOrder
+  window.convertToOrder = function () {
+    handleConvertToOrder();
+  };
 
   // ===== 匯出供外部使用 =====
   window.ParcelConverter = {
@@ -1079,8 +1093,3 @@
     calculateShipping: calculateShippingFee, // 新增：匯出運費計算函數
   };
 })();
-// ===== 全域函數（供 HTML 呼叫）=====
-window.convertToOrder = function (e) {
-  // 呼叫實際的處理函數，不傳遞 event
-  handleConvertToOrder();
-};
