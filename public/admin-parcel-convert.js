@@ -34,7 +34,7 @@
   const STATUS_COLORS = {
     PENDING: "#d63031",
     CONFIRMED: "#00b894",
-    ARRIVED: "#0984e3",
+    ARRIVED: "#88e309ff",
     COMPLETED: "#00cec9",
     CANCELLED: "#e74c3c",
   };
