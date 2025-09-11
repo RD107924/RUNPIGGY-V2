@@ -321,7 +321,7 @@ model SystemSetting {
   description String?   // 設定說明
   category    String?   // 設定分類
   updatedBy   String?   // 最後更新者
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
   
   @@index([category])
   @@map("system_settings")
