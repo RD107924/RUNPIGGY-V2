@@ -1,4 +1,4 @@
-// public/script.js - 優化版本，含詳細計算公式和超重超長費
+// public/script.js - 優化版本，含詳細計算公式和超重超長費（修改為只收一次）
 
 document.addEventListener("DOMContentLoaded", () => {
   // --- 檢查會員登入狀態 ---
@@ -82,8 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const CBM_TO_CAI_FACTOR = 35.3;
   const OVERSIZED_LIMIT = 300;
   const OVERWEIGHT_LIMIT = 100; // 新增：超重限制
-  const OVERWEIGHT_FEE = 800; // 新增：超重費
-  const OVERSIZED_FEE = 800; // 新增：超長費
+  const OVERWEIGHT_FEE = 800; // 新增：超重費（固定收一次）
+  const OVERSIZED_FEE = 800; // 新增：超長費（固定收一次）
   let itemCount = 0;
 
   // --- 2. 獲取 HTML 元素 ---
@@ -377,19 +377,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let initialSeaFreightCost = 0;
         let totalShipmentVolume = 0;
-        let hasOversizedItem = false;
-        let totalOverweightFee = 0;
-        let totalOversizedFee = 0;
+
+        // 修改：改為標記是否有超重或超長，而不是累加費用
+        let hasAnyOversizedItem = false; // 是否有任何超長物品
+        let hasAnyOverweightItem = false; // 是否有任何超重物品
+        let totalOverweightFee = 0; // 超重費（固定值）
+        let totalOversizedFee = 0; // 超長費（固定值）
 
         allItemsData.forEach((item) => {
+          // 檢查是否有超長物品（只標記，不累加）
           if (item.hasOversizedItem) {
-            hasOversizedItem = true;
-            item.oversizedFee = OVERSIZED_FEE * item.quantity;
-            totalOversizedFee += item.oversizedFee;
+            hasAnyOversizedItem = true;
           }
+
+          // 檢查是否有超重物品（只標記，不累加）
           if (item.isOverweight) {
-            item.overweightFee = OVERWEIGHT_FEE * item.quantity;
-            totalOverweightFee += item.overweightFee;
+            hasAnyOverweightItem = true;
           }
 
           const rateInfo = rates[item.type];
@@ -407,6 +410,14 @@ document.addEventListener("DOMContentLoaded", () => {
           initialSeaFreightCost += itemFinalCost;
           totalShipmentVolume += totalItemVolume;
         });
+
+        // 修改：只要有超重就收一次超重費，只要有超長就收一次超長費
+        if (hasAnyOverweightItem) {
+          totalOverweightFee = OVERWEIGHT_FEE; // 固定收取 800 元
+        }
+        if (hasAnyOversizedItem) {
+          totalOversizedFee = OVERSIZED_FEE; // 固定收取 800 元
+        }
 
         const finalSeaFreightCost = Math.max(
           initialSeaFreightCost,
@@ -432,7 +443,8 @@ document.addEventListener("DOMContentLoaded", () => {
           finalSeaFreightCost,
           remoteAreaRate,
           remoteFee,
-          hasOversizedItem,
+          hasAnyOversizedItem, // 修改：使用新的變數名稱
+          hasAnyOverweightItem, // 新增：標記是否有超重
           totalOverweightFee,
           totalOversizedFee,
           finalTotal,
@@ -497,7 +509,8 @@ document.addEventListener("DOMContentLoaded", () => {
       finalSeaFreightCost,
       remoteAreaRate,
       remoteFee,
-      hasOversizedItem,
+      hasAnyOversizedItem,
+      hasAnyOverweightItem,
       totalOverweightFee,
       totalOversizedFee,
       finalTotal,
@@ -548,19 +561,15 @@ document.addEventListener("DOMContentLoaded", () => {
       ).toLocaleString()} 台幣</strong>`;
       resultsHTML += `</div>`;
 
-      // 額外費用
+      // 修改：標記超重超長但不顯示個別費用
       if (item.isOverweight || item.hasOversizedItem) {
         resultsHTML += `<div style="background-color: #fff3cd; padding: 8px; margin: 5px 0; border-left: 3px solid #ffc107;">`;
-        resultsHTML += `<small style="color:#856404;"><strong>額外費用：</strong></small><br>`;
+        resultsHTML += `<small style="color:#856404;"><strong>特殊標記：</strong></small><br>`;
         if (item.isOverweight) {
-          resultsHTML += `<small style="color:#856404;">⚠ 單件超重 (>${OVERWEIGHT_LIMIT}kg): ${OVERWEIGHT_FEE} 元/件 × ${
-            item.quantity
-          } 件 = <span style="color: #e74c3c; font-weight: bold;">${item.overweightFee.toLocaleString()} 台幣</span></small><br>`;
+          resultsHTML += `<small style="color:#856404;">⚠ 此品項單件超重 (>${OVERWEIGHT_LIMIT}kg)</small><br>`;
         }
         if (item.hasOversizedItem) {
-          resultsHTML += `<small style="color:#856404;">⚠ 單邊超長 (>${OVERSIZED_LIMIT}cm): ${OVERSIZED_FEE} 元/件 × ${
-            item.quantity
-          } 件 = <span style="color: #e74c3c; font-weight: bold;">${item.oversizedFee.toLocaleString()} 台幣</span></small><br>`;
+          resultsHTML += `<small style="color:#856404;">⚠ 此品項單邊超長 (>${OVERSIZED_LIMIT}cm)</small><br>`;
         }
         resultsHTML += `</div>`;
       }
@@ -582,12 +591,13 @@ document.addEventListener("DOMContentLoaded", () => {
       resultsHTML += `<p style="color: green;">↳ 已超過最低消費，海運費為: <strong>${finalSeaFreightCost.toLocaleString()} 台幣</strong></p>`;
     }
 
+    // 修改：顯示固定的超重費和超長費
     if (totalOverweightFee > 0) {
-      resultsHTML += `<p><strong>總超重費: <span style="color: #e74c3c;">${totalOverweightFee.toLocaleString()} 台幣</span></strong></p>`;
+      resultsHTML += `<p><strong>超重附加費: <span style="color: #e74c3c;">${totalOverweightFee.toLocaleString()} 台幣</span></strong> <small style="color: #666;">(訂單含超重物品，收取固定費用)</small></p>`;
     }
 
     if (totalOversizedFee > 0) {
-      resultsHTML += `<p><strong>總超長費: <span style="color: #e74c3c;">${totalOversizedFee.toLocaleString()} 台幣</span></strong></p>`;
+      resultsHTML += `<p><strong>超長附加費: <span style="color: #e74c3c;">${totalOversizedFee.toLocaleString()} 台幣</span></strong> <small style="color: #666;">(訂單含超長物品，收取固定費用)</small></p>`;
     }
 
     // ========== 修改偏遠地區費用顯示部分 ==========
@@ -672,12 +682,12 @@ document.addEventListener("DOMContentLoaded", () => {
           + 偏遠費 ${Math.round(remoteFee).toLocaleString()}
           ${
             totalOverweightFee > 0
-              ? ` + 超重費 ${totalOverweightFee.toLocaleString()}`
+              ? ` + 超重附加費 ${totalOverweightFee.toLocaleString()}`
               : ""
           }
           ${
             totalOversizedFee > 0
-              ? ` + 超長費 ${totalOversizedFee.toLocaleString()}`
+              ? ` + 超長附加費 ${totalOversizedFee.toLocaleString()}`
               : ""
           })
         </small>

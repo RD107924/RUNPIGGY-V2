@@ -1,14 +1,14 @@
-// quote.js - 報價顯示頁面專用腳本
+// quote.js - 報價顯示頁面專用腳本（修改版：超重超長費只收一次）
 // 用於從 URL 參數讀取計算結果並顯示
 
 // 常數定義（與 script.js 保持一致）
-const VOLUME_DIVISOR = 1000000; // 材積除數
+const VOLUME_DIVISOR = 28317; // 材積除數
 const CBM_TO_CAI_FACTOR = 35.315; // 立方米轉材係數
 const MINIMUM_CHARGE = 2000; // 最低運費
 const OVERWEIGHT_LIMIT = 100; // 超重限制 (kg)
-const OVERWEIGHT_FEE = 600; // 超重費用
+const OVERWEIGHT_FEE = 800; // 超重費用（修改為固定收一次）
 const OVERSIZED_LIMIT = 300; // 超長限制 (cm)
-const OVERSIZED_FEE = 800; // 超長費用
+const OVERSIZED_FEE = 800; // 超長費用（修改為固定收一次）
 
 // 費率定義（與 script.js 保持一致）
 const rates = {
@@ -218,6 +218,32 @@ function displayQuoteResults(data) {
   const quoteNumber = generateQuoteNumber();
   const currentDate = new Date().toLocaleDateString("zh-TW");
 
+  // 修改：檢查是否有任何超重或超長物品
+  let hasAnyOverweightItem = false;
+  let hasAnyOversizedItem = false;
+
+  if (data.allItemsData && data.allItemsData.length > 0) {
+    data.allItemsData.forEach((item) => {
+      // 檢查超重
+      if (item.isOverweight || item.singleWeight > OVERWEIGHT_LIMIT) {
+        hasAnyOverweightItem = true;
+      }
+      // 檢查超長
+      if (
+        item.hasOversizedItem ||
+        item.length > OVERSIZED_LIMIT ||
+        item.width > OVERSIZED_LIMIT ||
+        item.height > OVERSIZED_LIMIT
+      ) {
+        hasAnyOversizedItem = true;
+      }
+    });
+  }
+
+  // 如果資料中有標記，也要檢查
+  if (data.hasAnyOverweightItem) hasAnyOverweightItem = true;
+  if (data.hasAnyOversizedItem) hasAnyOversizedItem = true;
+
   let resultsHTML = `
     <div class="quote-header" style="text-align: center; padding: 20px; 
          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -282,55 +308,65 @@ function displayQuoteResults(data) {
   // 顯示每個項目
   if (data.allItemsData && data.allItemsData.length > 0) {
     data.allItemsData.forEach((item, index) => {
+      // 檢查這個品項是否超重或超長
+      const isItemOverweight =
+        item.isOverweight || item.singleWeight > OVERWEIGHT_LIMIT;
+      const isItemOversized =
+        item.hasOversizedItem ||
+        item.length > OVERSIZED_LIMIT ||
+        item.width > OVERSIZED_LIMIT ||
+        item.height > OVERSIZED_LIMIT;
+
       resultsHTML += `
         <div style="background: #ffffff; border: 1px solid #dee2e6; 
              padding: 15px; margin: 15px 0; border-radius: 8px;">
           <div style="display: flex; justify-content: space-between; align-items: start;">
             <div style="flex: 1;">
               <h4 style="color: #495057; margin: 0 0 10px 0;">
-                第 ${index + 1} 筆：${item.description || `項目 ${index + 1}`}
+                第 ${index + 1} 筆：${
+        item.description || item.name || `項目 ${index + 1}`
+      }
                 <span style="background: #e7f3ff; color: #1a73e8; padding: 2px 8px; 
                      border-radius: 4px; font-size: 12px; margin-left: 10px;">
-                  ${item.category}
+                  ${item.category || item.type || "一般家具"}
                 </span>
               </h4>
               
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
                    gap: 10px; font-size: 14px; color: #666;">
-                <div>📏 尺寸：${item.length} × ${item.width} × ${
-        item.height
-      } cm</div>
+                ${
+                  item.length && item.width && item.height
+                    ? `
+                  <div>📏 尺寸：${item.length} × ${item.width} × ${item.height} cm</div>
+                `
+                    : ""
+                }
                 <div>⚖️ 單重：${item.singleWeight} kg</div>
                 <div>📦 數量：${item.quantity} 件</div>
                 <div>📐 材積：${item.totalVolume} 材</div>
               </div>
-            </div>
-            
-            <div style="text-align: right; min-width: 150px;">
-              <div style="font-size: 12px; color: #999; margin-bottom: 5px;">基本運費</div>
-              <div style="font-size: 20px; color: #e74c3c; font-weight: bold;">
-                NT$ ${Math.round(item.itemFinalCost).toLocaleString()}
-              </div>
-              
+
               ${
-                item.overweightFee > 0 || item.oversizedFee > 0
+                isItemOverweight || isItemOversized
                   ? `
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6;">
+                <div style="margin-top: 10px;">
                   ${
-                    item.overweightFee > 0
+                    isItemOverweight
                       ? `
-                    <div style="font-size: 12px; color: #dc3545;">
-                      超重費：+${item.overweightFee.toLocaleString()}
-                    </div>
+                    <span style="background: #fff3cd; color: #856404; padding: 2px 8px; 
+                         border-radius: 4px; font-size: 12px; margin-right: 5px;">
+                      ⚠ 超重物品
+                    </span>
                   `
                       : ""
                   }
                   ${
-                    item.oversizedFee > 0
+                    isItemOversized
                       ? `
-                    <div style="font-size: 12px; color: #dc3545;">
-                      超長費：+${item.oversizedFee.toLocaleString()}
-                    </div>
+                    <span style="background: #fff3cd; color: #856404; padding: 2px 8px; 
+                         border-radius: 4px; font-size: 12px;">
+                      ⚠ 超長物品
+                    </span>
                   `
                       : ""
                   }
@@ -338,6 +374,13 @@ function displayQuoteResults(data) {
               `
                   : ""
               }
+            </div>
+            
+            <div style="text-align: right; min-width: 150px;">
+              <div style="font-size: 12px; color: #999; margin-bottom: 5px;">基本運費</div>
+              <div style="font-size: 20px; color: #e74c3c; font-weight: bold;">
+                NT$ ${Math.round(item.itemFinalCost).toLocaleString()}
+              </div>
             </div>
           </div>
         </div>
@@ -405,6 +448,8 @@ function displayQuoteResults(data) {
   const hasExtraFees =
     data.totalOverweightFee > 0 ||
     data.totalOversizedFee > 0 ||
+    hasAnyOverweightItem ||
+    hasAnyOversizedItem ||
     data.remoteFee > 0;
 
   if (hasExtraFees) {
@@ -417,27 +462,47 @@ function displayQuoteResults(data) {
           <tbody>
     `;
 
-    if (data.totalOverweightFee > 0) {
+    // 修改：顯示固定的超重費（只要有超重物品就收一次）
+    if (data.totalOverweightFee > 0 || hasAnyOverweightItem) {
+      const overweightFee =
+        data.totalOverweightFee > 0
+          ? data.totalOverweightFee <= OVERWEIGHT_FEE
+            ? data.totalOverweightFee
+            : OVERWEIGHT_FEE
+          : OVERWEIGHT_FEE;
       resultsHTML += `
         <tr style="border-bottom: 1px solid #ffc107;">
           <td style="padding: 10px 0;">
-            超重費用 (單件超過 ${OVERWEIGHT_LIMIT} kg)
+            <div>超重附加費</div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+              訂單含超重物品（單件超過 ${OVERWEIGHT_LIMIT} kg），收取固定附加費
+            </div>
           </td>
           <td style="text-align: right; padding: 10px 0; color: #e74c3c; font-weight: bold;">
-            NT$ ${data.totalOverweightFee.toLocaleString()}
+            NT$ ${overweightFee.toLocaleString()}
           </td>
         </tr>
       `;
     }
 
-    if (data.totalOversizedFee > 0) {
+    // 修改：顯示固定的超長費（只要有超長物品就收一次）
+    if (data.totalOversizedFee > 0 || hasAnyOversizedItem) {
+      const oversizedFee =
+        data.totalOversizedFee > 0
+          ? data.totalOversizedFee <= OVERSIZED_FEE
+            ? data.totalOversizedFee
+            : OVERSIZED_FEE
+          : OVERSIZED_FEE;
       resultsHTML += `
         <tr style="border-bottom: 1px solid #ffc107;">
           <td style="padding: 10px 0;">
-            超長費用 (單邊超過 ${OVERSIZED_LIMIT} cm)
+            <div>超長附加費</div>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+              訂單含超長物品（單邊超過 ${OVERSIZED_LIMIT} cm），收取固定附加費
+            </div>
           </td>
           <td style="text-align: right; padding: 10px 0; color: #e74c3c; font-weight: bold;">
-            NT$ ${data.totalOversizedFee.toLocaleString()}
+            NT$ ${oversizedFee.toLocaleString()}
           </td>
         </tr>
       `;
@@ -507,7 +572,27 @@ function displayQuoteResults(data) {
     `;
   }
 
-  // 最終總計
+  // 最終總計 - 重新計算以確保正確
+  let finalTotal = data.finalTotal || 0;
+
+  // 如果使用新邏輯，重新計算總額
+  if (hasAnyOverweightItem || hasAnyOversizedItem) {
+    const baseFreight = data.finalSeaFreightCost || 0;
+    const remoteFee = data.remoteFee || 0;
+    const overweightFee = hasAnyOverweightItem
+      ? data.totalOverweightFee > 0 && data.totalOverweightFee <= OVERWEIGHT_FEE
+        ? data.totalOverweightFee
+        : OVERWEIGHT_FEE
+      : 0;
+    const oversizedFee = hasAnyOversizedItem
+      ? data.totalOversizedFee > 0 && data.totalOversizedFee <= OVERSIZED_FEE
+        ? data.totalOversizedFee
+        : OVERSIZED_FEE
+      : 0;
+
+    finalTotal = baseFreight + remoteFee + overweightFee + oversizedFee;
+  }
+
   resultsHTML += `
     <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
          color: white; padding: 25px; border-radius: 10px; text-align: center;
@@ -515,10 +600,14 @@ function displayQuoteResults(data) {
       <h2 style="margin: 0; color: white;">應付總額</h2>
       <div style="font-size: 48px; font-weight: bold; margin: 15px 0; 
            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
-        NT$ ${Math.round(data.finalTotal || 0).toLocaleString()}
+        NT$ ${Math.round(finalTotal).toLocaleString()}
       </div>
       <div style="font-size: 14px; opacity: 0.9;">
-        ${generatePriceBreakdown(data)}
+        ${generatePriceBreakdown(
+          data,
+          hasAnyOverweightItem,
+          hasAnyOversizedItem
+        )}
       </div>
     </div>
   `;
@@ -538,6 +627,15 @@ function displayQuoteResults(data) {
         <li>最終費用以實際入庫丈量為準</li>
         <li>報價僅適用於小跑豬傢俱專線</li>
         <li>不包含目的地清關稅費</li>
+        ${
+          hasAnyOverweightItem || hasAnyOversizedItem
+            ? `
+          <li style="color: #e74c3c;">
+            超重/超長附加費為每筆訂單固定收取，不論數量
+          </li>
+        `
+            : ""
+        }
         ${
           data.remoteFee > 0
             ? `
@@ -572,8 +670,12 @@ function displayQuoteResults(data) {
   quoteResultContainer.innerHTML = resultsHTML;
 }
 
-// 生成價格明細文字
-function generatePriceBreakdown(data) {
+// 生成價格明細文字（修改版）
+function generatePriceBreakdown(
+  data,
+  hasAnyOverweightItem,
+  hasAnyOversizedItem
+) {
   let breakdown = [];
 
   breakdown.push(
@@ -584,12 +686,21 @@ function generatePriceBreakdown(data) {
     breakdown.push(`偏遠費 ${Math.round(data.remoteFee).toLocaleString()}`);
   }
 
-  if (data.totalOverweightFee > 0) {
-    breakdown.push(`超重費 ${data.totalOverweightFee.toLocaleString()}`);
+  // 修改：使用固定費用
+  if (data.totalOverweightFee > 0 || hasAnyOverweightItem) {
+    const fee =
+      data.totalOverweightFee > 0 && data.totalOverweightFee <= OVERWEIGHT_FEE
+        ? data.totalOverweightFee
+        : OVERWEIGHT_FEE;
+    breakdown.push(`超重附加費 ${fee.toLocaleString()}`);
   }
 
-  if (data.totalOversizedFee > 0) {
-    breakdown.push(`超長費 ${data.totalOversizedFee.toLocaleString()}`);
+  if (data.totalOversizedFee > 0 || hasAnyOversizedItem) {
+    const fee =
+      data.totalOversizedFee > 0 && data.totalOversizedFee <= OVERSIZED_FEE
+        ? data.totalOversizedFee
+        : OVERSIZED_FEE;
+    breakdown.push(`超長附加費 ${fee.toLocaleString()}`);
   }
 
   return `( ${breakdown.join(" + ")} )`;
