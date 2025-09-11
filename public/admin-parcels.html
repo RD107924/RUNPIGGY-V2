@@ -315,7 +315,7 @@
         min-width: 120px;
       }
 
-      /* 圖片展示 */
+      /* 圖片展示 - 修復版本 */
       .parcel-images {
         display: flex;
         gap: 10px;
@@ -329,13 +329,14 @@
         object-fit: cover;
         border-radius: 8px;
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s;
         border: 2px solid #e9ecef;
       }
 
       .parcel-images img:hover {
         transform: scale(1.05);
         border-color: #1a73e8;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       /* 管理員備註 */
@@ -837,7 +838,26 @@
         });
       }
 
-      // 顯示包裹詳情
+      // 修復圖片路徑的輔助函數
+      function getFullImageUrl(imagePath) {
+        // 如果已經是完整的 URL，直接返回
+        if (
+          imagePath.startsWith("http://") ||
+          imagePath.startsWith("https://")
+        ) {
+          return imagePath;
+        }
+
+        // 如果是相對路徑，加上當前網站的域名
+        const baseUrl = window.location.origin;
+
+        // 確保路徑以 / 開頭
+        const path = imagePath.startsWith("/") ? imagePath : "/" + imagePath;
+
+        return baseUrl + path;
+      }
+
+      // 顯示包裹詳情 - 修復版本
       function showParcelDetail(parcelId) {
         const parcel = allParcels.find((p) => p.id === parcelId);
         if (!parcel) return;
@@ -920,10 +940,11 @@
                 <h3>商品圖片</h3>
                 <div class="parcel-images">
                   ${parcel.productImages
-                    .map(
-                      (img) =>
-                        `<img src="${img}" alt="商品圖片" onclick="window.open('${img}', '_blank')" title="點擊查看大圖">`
-                    )
+                    .map((img) => {
+                      // 使用修復後的完整 URL
+                      const fullUrl = getFullImageUrl(img);
+                      return `<img src="${fullUrl}" alt="商品圖片" onclick="window.open('${fullUrl}', '_blank')" title="點擊查看大圖">`;
+                    })
                     .join("")}
                 </div>
               `
