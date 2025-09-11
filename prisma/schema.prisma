@@ -17,25 +17,24 @@ model User {
   passwordHash  String    // 加密後的密碼
   role          String    @default("OPERATOR") // 角色：OPERATOR, ADMIN, SUPER_ADMIN
   
-  // 員工資訊
+  // 員工資訊（全部設為可選，避免遷移問題）
   fullName      String?   // 員工全名
   email         String?   // 員工電子郵件
   phone         String?   // 員工聯絡電話
   department    String?   // 部門
   isActive      Boolean   @default(true) // 帳號是否啟用
   
-  // 登入與安全
+  // 登入與安全（全部可選或有預設值）
   lastLoginAt   DateTime? // 最後登入時間
   loginAttempts Int       @default(0) // 登入失敗次數
   lockedUntil   DateTime? // 帳號鎖定到期時間
   
-  // 時間戳記
+  // 時間戳記（重要：加入預設值避免遷移錯誤）
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  updatedAt     DateTime  @default(now()) @updatedAt  // 加入預設值
   
   // 關聯
   assignedOrders ShipmentOrder[] @relation("AssignedOrders")
-  auditLogs      AuditLog[]      @relation("PerformedBy")
 
   @@index([username])
   @@index([role])
@@ -57,29 +56,29 @@ model Customer {
   idNumber        String?   // 身分證字號
   taxId           String?   // 統一編號
   
-  // 會員狀態與安全
+  // 會員狀態與安全（全部有預設值）
   isActive        Boolean   @default(true) // 帳號狀態
   emailVerified   Boolean   @default(false) // 電子郵件是否已驗證
   phoneVerified   Boolean   @default(false) // 電話是否已驗證
   
-  // 密碼管理
+  // 密碼管理（全部可選或有預設值）
   needPasswordChange Boolean @default(false) // 是否需要修改密碼
   passwordResetAt    DateTime? // 最後密碼重設時間
   passwordResetToken String?   // 密碼重設令牌
   passwordResetExpiry DateTime? // 密碼重設令牌到期時間
   
-  // 會員等級與積分（未來擴充用）
+  // 會員等級與積分（全部有預設值）
   memberLevel     String    @default("BASIC") // BASIC, SILVER, GOLD, PLATINUM
   points          Int       @default(0) // 會員積分
   totalSpent      Float     @default(0) // 總消費金額
   
-  // 登入記錄
+  // 登入記錄（全部可選或有預設值）
   lastLoginAt     DateTime? // 最後登入時間
   loginCount      Int       @default(0) // 登入次數
   loginAttempts   Int       @default(0) // 登入失敗次數
   lockedUntil     DateTime? // 帳號鎖定到期時間
   
-  // 偏好設定
+  // 偏好設定（全部可選或有預設值）
   preferences     String?   // JSON 字串儲存用戶偏好設定
   newsletter      Boolean   @default(true) // 是否訂閱電子報
   smsNotification Boolean   @default(true) // 是否接收簡訊通知
@@ -89,13 +88,12 @@ model Customer {
   
   // 時間戳記
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  updatedAt       DateTime  @default(now()) @updatedAt  // 加入預設值
   deletedAt       DateTime? // 軟刪除時間
   
   // 關聯
   orders              ShipmentOrder[]       @relation("CustomerOrders")
   parcelNotifications ParcelNotification[]  @relation("CustomerParcels")
-  customerLogs        CustomerLog[]         @relation("CustomerActivity")
 
   @@index([email])
   @@index([phone])
@@ -130,32 +128,32 @@ model ShipmentOrder {
   // 狀態值：NEEDS_PURCHASE, PURCHASED, IN_WAREHOUSE, NOT_IN_WAREHOUSE, 
   //        SHIPPED, IN_CUSTOMS, DELIVERY_COMPLETE, CANCELLED
   
-  // 加值服務
+  // 加值服務（全部可選或有預設值）
   additionalServices String?  // JSON 字串儲存加值服務資訊
   serviceQuoted      Boolean  @default(false) // 是否已報價加值服務
   serviceQuoteAmount Float?   // 加值服務報價金額
   serviceCompleted   Boolean  @default(false) // 加值服務是否完成
   
-  // 物流資訊
+  // 物流資訊（全部可選）
   trackingNumber    String?   // 物流追蹤號碼
   shippingMethod    String?   // 運送方式
   estimatedDelivery DateTime? // 預計送達時間
   actualDelivery    DateTime? // 實際送達時間
   
-  // 付款資訊
+  // 付款資訊（全部可選或有預設值）
   paymentStatus     String    @default("PENDING") // PENDING, PAID, FAILED, REFUNDED
   paymentMethod     String?   // 付款方式
   paidAt            DateTime? // 付款時間
   invoiceNumber     String?   // 發票號碼
   
-  // 備註
+  // 備註（全部可選）
   customerNote      String?   // 客戶備註
   adminNote         String?   // 管理員備註
   internalNote      String?   // 內部備註
   
   // 時間戳記
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  updatedAt         DateTime  @default(now()) @updatedAt  // 加入預設值
   completedAt       DateTime? // 訂單完成時間
   cancelledAt       DateTime? // 訂單取消時間
   
@@ -179,17 +177,17 @@ model CalculationQuote {
   id                String    @id @default(cuid())
   calculationResult String    // JSON 字串儲存計算結果
   
-  // 追蹤資訊
+  // 追蹤資訊（全部可選或有預設值）
   ipAddress         String?   // 建立者 IP
   userAgent         String?   // 建立者瀏覽器資訊
   referrer          String?   // 來源網址
   
-  // 分享資訊
+  // 分享資訊（全部有預設值）
   shareCount        Int       @default(0) // 分享次數
   viewCount         Int       @default(0) // 查看次數
   lastViewedAt      DateTime? // 最後查看時間
   
-  // 轉換追蹤
+  // 轉換追蹤（有預設值）
   convertedToOrder  Boolean   @default(false) // 是否已轉換為訂單
   orderId           String?   // 關聯的訂單 ID
   
@@ -220,7 +218,7 @@ model ParcelNotification {
   status            String    @default("PENDING") 
   // 狀態值：PENDING, CONFIRMED, ARRIVED, COMPLETED, CANCELLED
   
-  // 台灣收件資料
+  // 台灣收件資料（全部可選）
   taiwanDelivery    String?   // JSON 字串儲存台灣收件資料
   taiwanTracking    String?   // 台灣段物流單號
   
@@ -228,24 +226,24 @@ model ParcelNotification {
   customerId        String?
   customer          Customer? @relation("CustomerParcels", fields: [customerId], references: [id])
   
-  // 非會員資訊
+  // 非會員資訊（全部可選）
   guestEmail        String?   // 非會員的電子郵件
   guestPhone        String?   // 非會員的電話
   guestName         String?   // 非會員的姓名
   queryCode         String?   @unique // 非會員查詢碼
   
-  // 備註
+  // 備註（全部可選）
   note              String?   // 客戶備註
   adminNote         String?   // 管理員備註
   internalNote      String?   // 內部備註
   
-  // 處理記錄
+  // 處理記錄（全部可選）
   processedBy       String?   // 處理人員 ID
   processedAt       DateTime? // 處理時間
   
   // 時間戳記
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  updatedAt         DateTime  @default(now()) @updatedAt  // 加入預設值
   confirmedAt       DateTime? // 確認時間
   arrivedAt         DateTime? // 到倉時間
   completedAt       DateTime? // 完成時間
@@ -258,71 +256,4 @@ model ParcelNotification {
   @@index([queryCode])
   @@index([createdAt])
   @@map("parcel_notifications")
-}
-
-// ===== 審計日誌資料模型 =====
-model AuditLog {
-  id            String    @id @default(cuid())
-  
-  // 操作資訊
-  action        String    // 操作類型：LOGIN, LOGOUT, PASSWORD_RESET, ORDER_UPDATE, etc.
-  targetType    String    // 目標類型：CUSTOMER, ORDER, PARCEL, etc.
-  targetId      String?   // 目標 ID
-  
-  // 操作詳情
-  details       String?   // JSON 字串儲存詳細資訊
-  previousValue String?   // 修改前的值（JSON）
-  newValue      String?   // 修改後的值（JSON）
-  
-  // 操作者資訊
-  performedById String    // 執行操作的用戶 ID
-  performedBy   User      @relation("PerformedBy", fields: [performedById], references: [id])
-  ipAddress     String?   // IP 地址
-  userAgent     String?   // 瀏覽器資訊
-  
-  // 時間戳記
-  createdAt     DateTime  @default(now())
-  
-  @@index([action])
-  @@index([targetType, targetId])
-  @@index([performedById])
-  @@index([createdAt])
-  @@map("audit_logs")
-}
-
-// ===== 客戶活動日誌 =====
-model CustomerLog {
-  id          String    @id @default(cuid())
-  
-  // 活動資訊
-  customerId  String    // 客戶 ID
-  customer    Customer  @relation("CustomerActivity", fields: [customerId], references: [id])
-  action      String    // 動作類型：LOGIN, ORDER_PLACED, PASSWORD_CHANGED, etc.
-  
-  // 詳細資訊
-  details     String?   // JSON 字串儲存詳細資訊
-  ipAddress   String?   // IP 地址
-  userAgent   String?   // 瀏覽器資訊
-  
-  // 時間戳記
-  createdAt   DateTime  @default(now())
-  
-  @@index([customerId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("customer_logs")
-}
-
-// ===== 系統設定（未來擴充） =====
-model SystemSetting {
-  id          String    @id @default(cuid())
-  key         String    @unique // 設定鍵值
-  value       String    // 設定值（JSON）
-  description String?   // 設定說明
-  category    String?   // 設定分類
-  updatedBy   String?   // 最後更新者
-  updatedAt   DateTime  @default(now()) @updatedAt
-  
-  @@index([category])
-  @@map("system_settings")
 }
