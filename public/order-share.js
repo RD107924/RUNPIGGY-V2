@@ -1,4 +1,4 @@
-// order-share.js - 訂單分享頁面邏輯（優化版）
+// order-share.js - 訂單分享頁面邏輯（完整優化版）
 (function () {
   "use strict";
 
@@ -20,7 +20,6 @@
   // 聯絡資訊配置
   const CONTACT_INFO = {
     line: "@runpiggy",
-    website: "https://www.runpiggy.com",
   };
 
   // 狀態對應表
@@ -39,6 +38,23 @@
     PAID: { text: "已付款", color: "#4caf50", icon: "✅" },
     FAILED: { text: "付款失敗", color: "#f44336", icon: "❌" },
     REFUNDED: { text: "已退款", color: "#9e9e9e", icon: "↩️" },
+  };
+
+  // 傢俱計算器常數
+  const VOLUME_DIVISOR = 28317;
+  const CBM_TO_CAI_FACTOR = 35.3;
+  const MINIMUM_CHARGE = 2000;
+  const OVERWEIGHT_LIMIT = 100;
+  const OVERWEIGHT_FEE = 800;
+  const OVERSIZED_LIMIT = 300;
+  const OVERSIZED_FEE = 800;
+
+  // 費率定義
+  const rates = {
+    general: { name: "一般家具", weightRate: 22, volumeRate: 125 },
+    special_a: { name: "特殊家具A", weightRate: 32, volumeRate: 184 },
+    special_b: { name: "特殊家具B", weightRate: 40, volumeRate: 224 },
+    special_c: { name: "特殊家具C", weightRate: 50, volumeRate: 274 },
   };
 
   // ===== 初始化 =====
@@ -565,9 +581,9 @@
         breakdown.oversized = result.totalOversizedFee;
       }
 
-      // 顯示計算明細
+      // 顯示詳細計算明細
       if (result.allItemsData && result.allItemsData.length > 0) {
-        displayCalculationDetails(result);
+        displayDetailedCalculation(result, order);
       }
     }
 
@@ -636,13 +652,225 @@
     displayPriceSummary(breakdown);
   }
 
+  // 顯示詳細計算明細（新增函數）
+  function displayDetailedCalculation(result, order) {
+    const detailsContainer = document.getElementById("calculation-details");
+    const contentDiv = document.getElementById("calc-details-content");
+
+    if (!detailsContainer || !contentDiv) return;
+    if (!result.allItemsData || result.allItemsData.length === 0) return;
+
+    detailsContainer.style.display = "block";
+
+    // 決定使用哪種費率
+    let furnitureType = "general";
+    if (order.finalQuoteData && order.finalQuoteData.furnitureType) {
+      furnitureType = order.finalQuoteData.furnitureType;
+    }
+    const rateInfo = rates[furnitureType] || rates.general;
+
+    let html = '<div class="calc-details-wrapper">';
+
+    // 標題
+    html += `
+      <div class="calc-section-title">
+        <h3>--- 費用計算明細 (逐筆) ---</h3>
+      </div>
+    `;
+
+    // 顯示每個商品的詳細計算
+    result.allItemsData.forEach((item, index) => {
+      const itemLength = item.length || 0;
+      const itemWidth = item.width || 0;
+      const itemHeight = item.height || 0;
+      const itemWeight = item.weight || 0;
+      const quantity = item.quantity || 1;
+
+      // 計算材積
+      const singleVolume =
+        (itemLength * itemWidth * itemHeight) / VOLUME_DIVISOR;
+      const totalVolume = singleVolume * quantity;
+      const totalWeight = itemWeight * quantity;
+
+      // 計算費用
+      const volumeCost = Math.round(totalVolume * rateInfo.volumeRate);
+      const weightCost = Math.round(totalWeight * rateInfo.weightRate);
+      const itemFreight = Math.max(volumeCost, weightCost, MINIMUM_CHARGE);
+
+      html += `
+        <div class="calc-item-detailed">
+          <div class="calc-header">
+            <h4>[${
+              item.itemName || item.name || `商品 ${index + 1}`
+            } × ${quantity} 件 - ${rateInfo.name}]</h4>
+          </div>
+          
+          <div class="calc-section">
+            <div class="calc-subtitle">📐 材積計算：</div>
+            <div class="calc-formula">
+              (${itemLength}cm × ${itemWidth}cm × ${itemHeight}cm) ÷ ${VOLUME_DIVISOR.toLocaleString()} = ${singleVolume.toFixed(
+        1
+      )} 材/件
+            </div>
+          </div>
+          
+          <div class="calc-section">
+            <div class="calc-subtitle">📊 數量計算：</div>
+            <div class="calc-formula">
+              總材積: ${singleVolume.toFixed(
+                1
+              )} 材/件 × ${quantity} 件 = ${totalVolume.toFixed(1)} 材<br>
+              總重量: ${itemWeight} kg/件 × ${quantity} 件 = ${totalWeight} kg
+            </div>
+          </div>
+          
+          <div class="calc-section">
+            <div class="calc-subtitle">💰 運費計算：</div>
+            <div class="calc-formula">
+              材積費用: ${totalVolume.toFixed(1)} 材 × ${
+        rateInfo.volumeRate
+      } 元/材 = <span class="price-highlight">${volumeCost.toLocaleString()} 台幣</span><br>
+              重量費用: ${totalWeight} kg × ${
+        rateInfo.weightRate
+      } 元/kg = <span class="price-highlight">${weightCost.toLocaleString()} 台幣</span><br>
+              → 基本運費(取較高者): <span class="final-price">${itemFreight.toLocaleString()} 台幣</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // 顯示額外費用
+    let hasAdditionalFees = false;
+    let additionalFeesHTML = `
+      <div class="calc-item-detailed additional-fees">
+        <div class="calc-header">
+          <h4>📋 額外費用計算</h4>
+        </div>
+    `;
+
+    // 超重費
+    if (result.totalOverweightFee && result.totalOverweightFee > 0) {
+      hasAdditionalFees = true;
+      additionalFeesHTML += `
+        <div class="calc-section">
+          <div class="calc-subtitle">⚠️ 超重附加費：</div>
+          <div class="calc-formula">
+            單件重量超過 ${OVERWEIGHT_LIMIT} kg<br>
+            附加費用: <span class="price-highlight">${result.totalOverweightFee.toLocaleString()} 台幣</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // 超大費
+    if (result.totalOversizedFee && result.totalOversizedFee > 0) {
+      hasAdditionalFees = true;
+      additionalFeesHTML += `
+        <div class="calc-section">
+          <div class="calc-subtitle">📦 超大附加費：</div>
+          <div class="calc-formula">
+            單邊尺寸超過 ${OVERSIZED_LIMIT} cm<br>
+            附加費用: <span class="price-highlight">${result.totalOversizedFee.toLocaleString()} 台幣</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // 偏遠地區費
+    if (result.remoteFee && result.remoteFee > 0) {
+      hasAdditionalFees = true;
+      additionalFeesHTML += `
+        <div class="calc-section">
+          <div class="calc-subtitle">🚚 偏遠地區費：</div>
+          <div class="calc-formula">
+            偏遠地區配送附加<br>
+            附加費用: <span class="price-highlight">${result.remoteFee.toLocaleString()} 台幣</span>
+          </div>
+        </div>
+      `;
+    }
+
+    additionalFeesHTML += `</div>`;
+
+    if (hasAdditionalFees) {
+      html += additionalFeesHTML;
+    }
+
+    // 顯示總計
+    const finalTotal =
+      result.finalTotal || order.finalTotalAmount || order.totalAmount || 0;
+    html += `
+      <div class="calc-item-summary">
+        <div class="calc-header">
+          <h4>📊 費用總計</h4>
+        </div>
+        <div class="summary-content">
+          <div class="summary-row">
+            <span>基本運費：</span>
+            <span class="summary-value">NT$ ${(
+              result.finalSeaFreightCost || 0
+            ).toLocaleString()}</span>
+          </div>
+          ${
+            result.remoteFee
+              ? `
+            <div class="summary-row">
+              <span>偏遠地區費：</span>
+              <span class="summary-value">NT$ ${result.remoteFee.toLocaleString()}</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            result.totalOverweightFee
+              ? `
+            <div class="summary-row">
+              <span>超重附加費：</span>
+              <span class="summary-value">NT$ ${result.totalOverweightFee.toLocaleString()}</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            result.totalOversizedFee
+              ? `
+            <div class="summary-row">
+              <span>超大附加費：</span>
+              <span class="summary-value">NT$ ${result.totalOversizedFee.toLocaleString()}</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            order.protectionPrice && order.protectionPrice > 0
+              ? `
+            <div class="summary-row">
+              <span>加強保護費：</span>
+              <span class="summary-value">NT$ ${order.protectionPrice.toLocaleString()}</span>
+            </div>
+          `
+              : ""
+          }
+          <div class="summary-row total">
+            <span>應付總額：</span>
+            <span class="summary-value">NT$ ${finalTotal.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    html += "</div>";
+    contentDiv.innerHTML = html;
+  }
+
   // 顯示傢俱類型
   function displayFurnitureType(type) {
     const typeMap = {
-      general: "一般傢俱",
-      special_a: "特殊傢俱A",
-      special_b: "特殊傢俱B",
-      special_c: "特殊傢俱C",
+      general: "一般家具",
+      special_a: "特殊家具A",
+      special_b: "特殊家具B",
+      special_c: "特殊家具C",
     };
 
     const displayText = typeMap[type] || type;
@@ -662,117 +890,6 @@
     if (calcTimeEl) {
       calcTimeEl.textContent = `計算時間: ${formatDateTime(time)}`;
     }
-  }
-
-  // 顯示計算明細
-  function displayCalculationDetails(result) {
-    const detailsContainer = document.getElementById("calculation-details");
-    const contentDiv = document.getElementById("calc-details-content");
-
-    if (!detailsContainer || !contentDiv) return;
-    if (!result.allItemsData || result.allItemsData.length === 0) return;
-
-    detailsContainer.style.display = "block";
-
-    let html = '<div class="calc-details-wrapper">';
-
-    // 顯示每個商品的明細
-    result.allItemsData.forEach((item, index) => {
-      html += `
-        <div class="calc-item">
-          <div class="calc-item-header">
-            <strong>${
-              item.itemName || item.name || `商品 ${index + 1}`
-            }</strong>
-            <span class="calc-item-quantity">× ${item.quantity || 1}</span>
-          </div>
-          <div class="calc-item-details">
-            <div class="calc-detail-row">
-              <span class="calc-label">重量:</span>
-              <span class="calc-value">${item.weight || 0} kg</span>
-            </div>
-            <div class="calc-detail-row">
-              <span class="calc-label">尺寸:</span>
-              <span class="calc-value">${item.length || 0}×${item.width || 0}×${
-        item.height || 0
-      } cm</span>
-            </div>
-            ${
-              item.cbm
-                ? `
-              <div class="calc-detail-row">
-                <span class="calc-label">材積:</span>
-                <span class="calc-value">${parseFloat(item.cbm).toFixed(
-                  4
-                )} m³</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              item.singleVolume
-                ? `
-              <div class="calc-detail-row">
-                <span class="calc-label">體積:</span>
-                <span class="calc-value">${item.singleVolume} 材</span>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        </div>
-      `;
-    });
-
-    // 顯示總計
-    if (result.totalCbm || result.totalShipmentVolume) {
-      html += `
-        <div class="calc-item calc-total">
-          <div class="calc-item-header">
-            <strong>📊 總計算結果</strong>
-          </div>
-          <div class="calc-item-details">
-            ${
-              result.totalCbm
-                ? `
-              <div class="calc-detail-row">
-                <span class="calc-label">總材積:</span>
-                <span class="calc-value">${parseFloat(result.totalCbm).toFixed(
-                  4
-                )} m³</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              result.totalShipmentVolume
-                ? `
-              <div class="calc-detail-row">
-                <span class="calc-label">總體積:</span>
-                <span class="calc-value">${result.totalShipmentVolume.toFixed(
-                  2
-                )} 材</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              result.remoteAreaRate
-                ? `
-              <div class="calc-detail-row">
-                <span class="calc-label">偏遠地區費率:</span>
-                <span class="calc-value">${result.remoteAreaRate}%</span>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        </div>
-      `;
-    }
-
-    html += "</div>";
-    contentDiv.innerHTML = html;
   }
 
   // 顯示費用摘要
@@ -1251,7 +1368,7 @@
 
   // ===== 進階功能 =====
   function initAnimations() {
-    // 添加 CSS 動畫
+    // 添加 CSS 動畫和詳細計算樣式
     if (!document.getElementById("order-share-styles")) {
       const style = document.createElement("style");
       style.id = "order-share-styles";
@@ -1303,61 +1420,162 @@
           animation: pulse 2s infinite;
         }
         
-        /* 計算明細樣式 */
+        /* 詳細計算明細樣式 */
         .calc-details-wrapper {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 20px;
         }
         
-        .calc-item {
+        .calc-section-title {
+          text-align: center;
+          padding: 20px 0;
+          border-bottom: 2px solid #1a73e8;
+          margin-bottom: 20px;
+        }
+        
+        .calc-section-title h3 {
+          color: #1a73e8;
+          font-size: 20px;
+          font-weight: 600;
+          margin: 0;
+        }
+        
+        /* 詳細計算項目 */
+        .calc-item-detailed {
           background: white;
-          padding: 12px;
+          border: 2px solid #e3f2fd;
+          border-radius: 8px;
+          padding: 0;
+          margin-bottom: 20px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .calc-item-detailed.additional-fees {
+          border-color: #fff3e0;
+        }
+        
+        .calc-item-detailed .calc-header {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 15px 20px;
+        }
+        
+        .calc-item-detailed.additional-fees .calc-header {
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .calc-item-detailed .calc-header h4 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 500;
+        }
+        
+        .calc-section {
+          padding: 20px;
+          border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .calc-section:last-child {
+          border-bottom: none;
+        }
+        
+        .calc-subtitle {
+          font-weight: 600;
+          color: #1a73e8;
+          margin-bottom: 12px;
+          font-size: 15px;
+        }
+        
+        .calc-formula {
+          font-family: 'Courier New', monospace;
+          font-size: 14px;
+          line-height: 1.8;
+          color: #555;
+          padding-left: 20px;
+          background: #f8f9fa;
+          padding: 15px 20px;
           border-radius: 6px;
-          border: 1px solid #e0e0e0;
+          border-left: 3px solid #1a73e8;
         }
         
-        .calc-item.calc-total {
+        .price-highlight {
+          color: #f57c00;
+          font-weight: 600;
+          font-size: 15px;
           background: #fff3e0;
-          border-color: #ffb74d;
+          padding: 2px 6px;
+          border-radius: 4px;
         }
         
-        .calc-item-header {
+        .final-price {
+          color: #d32f2f;
+          font-weight: 700;
+          font-size: 18px;
+          background: #ffebee;
+          padding: 4px 10px;
+          border-radius: 4px;
+          display: inline-block;
+          margin-top: 5px;
+        }
+        
+        /* 總計樣式 */
+        .calc-item-summary {
+          background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+          border: 2px solid #1a73e8;
+          border-radius: 8px;
+          overflow: hidden;
+          margin-top: 30px;
+          box-shadow: 0 4px 12px rgba(26,115,232,0.15);
+        }
+        
+        .calc-item-summary .calc-header {
+          background: #1a73e8;
+          color: white;
+          padding: 15px 20px;
+        }
+        
+        .calc-item-summary .calc-header h4 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 500;
+        }
+        
+        .summary-content {
+          background: white;
+          padding: 25px;
+        }
+        
+        .summary-row {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          margin-bottom: 10px;
+          padding: 12px 0;
+          border-bottom: 1px solid #e0e0e0;
+          font-size: 15px;
+        }
+        
+        .summary-row:last-child {
+          border-bottom: none;
+        }
+        
+        .summary-row.total {
+          border-top: 2px solid #1a73e8;
+          margin-top: 15px;
+          padding-top: 20px;
+          font-size: 20px;
+          font-weight: 600;
+          color: #1a73e8;
+        }
+        
+        .summary-value {
           font-weight: 600;
           color: #333;
         }
         
-        .calc-item-quantity {
-          background: #1a73e8;
-          color: white;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-        }
-        
-        .calc-item-details {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-          gap: 8px;
-        }
-        
-        .calc-detail-row {
-          display: flex;
-          justify-content: space-between;
-          font-size: 13px;
-        }
-        
-        .calc-label {
-          color: #666;
-        }
-        
-        .calc-value {
-          color: #333;
-          font-weight: 500;
+        .summary-row.total .summary-value {
+          color: #d32f2f;
+          font-size: 24px;
         }
         
         /* 價格提示樣式 */
@@ -1370,6 +1588,56 @@
         
         .price-tooltip:hover {
           color: #1557b0;
+        }
+        
+        /* 響應式設計 */
+        @media (max-width: 640px) {
+          .calc-formula {
+            font-size: 12px;
+            padding: 12px 15px;
+            padding-left: 15px;
+          }
+          
+          .calc-item-detailed {
+            margin-bottom: 15px;
+          }
+          
+          .calc-section {
+            padding: 15px;
+          }
+          
+          .summary-row {
+            font-size: 14px;
+          }
+          
+          .summary-row.total {
+            font-size: 18px;
+          }
+          
+          .summary-row.total .summary-value {
+            font-size: 20px;
+          }
+        }
+        
+        /* 列印樣式 */
+        @media print {
+          .calc-item-detailed {
+            page-break-inside: avoid;
+            border: 1px solid #ccc;
+          }
+          
+          .calc-item-detailed .calc-header {
+            background: #f5f5f5 !important;
+            color: #333 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+          
+          .calc-formula {
+            background: #f9f9f9 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
         }
       `;
       document.head.appendChild(style);
@@ -1417,5 +1685,6 @@
     formatCurrency: formatCurrency,
     formatDateTime: formatDateTime,
     displayEnhancedPriceDetails: displayEnhancedPriceDetails,
+    displayDetailedCalculation: displayDetailedCalculation,
   };
 })();
