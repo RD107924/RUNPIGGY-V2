@@ -1,4 +1,4 @@
-// admin-parcel-convert.js - 包裹轉訂單管理介面邏輯（極簡版）
+// admin-parcel-convert.js - 包裹轉訂單管理介面邏輯（修正版）
 (function () {
   "use strict";
 
@@ -619,25 +619,9 @@
       });
 
       if (!response.ok) {
-        console.warn("API 失敗，使用本地模擬");
-
-        const mockOrder = {
-          id: `ORD-${Date.now()}`,
-          shareToken: btoa(Math.random().toString()).substring(10, 25),
-          createdAt: new Date().toISOString(),
-          finalTotalAmount: formData.finalTotalAmount,
-        };
-
-        currentOrder = mockOrder;
-
-        showAlert("info", "訂單建立成功（測試模式）");
-        displayShareSection(mockOrder);
-
-        const convertForm = document.querySelector(".conversion-form");
-        if (convertForm) {
-          convertForm.style.display = "none";
-        }
-        return;
+        const errorData = await response.json();
+        console.error("API 錯誤回應:", errorData);
+        throw new Error(errorData.error || "轉換失敗");
       }
 
       const result = await response.json();
@@ -658,30 +642,97 @@
     }
   }
 
+  // ===== 修正後的 collectFormData 函數 =====
   function collectFormData() {
-    const weight = parseFloat(document.getElementById("actual-weight").value);
-    const length = parseFloat(document.getElementById("actual-length").value);
-    const width = parseFloat(document.getElementById("actual-width").value);
-    const height = parseFloat(document.getElementById("actual-height").value);
+    // 基本測量數據
+    const weight =
+      parseFloat(document.getElementById("actual-weight").value) || 0;
+    const length =
+      parseFloat(document.getElementById("actual-length").value) || 0;
+    const width =
+      parseFloat(document.getElementById("actual-width").value) || 0;
+    const height =
+      parseFloat(document.getElementById("actual-height").value) || 0;
+
+    // 費用數據
     const shippingFee =
       parseFloat(document.getElementById("shipping-fee").value) || 0;
+    const serviceFee =
+      parseFloat(document.getElementById("service-fee").value) || 0;
+    const otherFee =
+      parseFloat(document.getElementById("other-fee").value) || 0;
 
+    // 加強保護
+    const protectionCheckbox = document.getElementById("protection-needed");
+    const protectionNeeded = protectionCheckbox
+      ? protectionCheckbox.checked
+      : false;
+    const protectionPrice = protectionNeeded
+      ? parseFloat(document.getElementById("protection-price").value) || 0
+      : 0;
+    const protectionNote = protectionNeeded
+      ? document.getElementById("protection-note").value || ""
+      : "";
+
+    // 計算總金額
+    const finalTotalAmount =
+      shippingFee + serviceFee + protectionPrice + otherFee;
+
+    // 組裝 finalQuoteData 物件（這是後端需要的格式）
+    const finalQuoteData = {
+      shippingFee: shippingFee,
+      serviceFee: serviceFee,
+      protectionFee: protectionPrice,
+      otherFee: otherFee,
+      totalAmount: finalTotalAmount,
+      // 加入其他可能需要的欄位
+      furnitureType:
+        document.getElementById("furniture-type")?.value || "general",
+      deliveryLocation:
+        document.getElementById("delivery-location")?.value || "0",
+      calculatedAt: new Date().toISOString(),
+    };
+
+    // 組裝 additionalServices 物件
+    const additionalServices = {
+      protection: {
+        needed: protectionNeeded,
+        price: protectionPrice,
+        note: protectionNote,
+      },
+      // 可以加入其他額外服務
+      express: false,
+      insurance: false,
+      packaging: false,
+    };
+
+    // 報價備註
+    const quoteNote = document.getElementById("quote-note")?.value || "";
+
+    // 返回完整的資料物件（符合後端 API 的期待格式）
     return {
+      // 實際測量數據
       actualWeight: weight,
       actualLength: length,
       actualWidth: width,
       actualHeight: height,
-      protectionNeeded: false,
-      protectionPrice: 0,
-      protectionNote: "",
-      finalQuoteData: {
-        shipping: shippingFee,
-        service: 0,
-        protection: 0,
-        other: 0,
-      },
-      finalTotalAmount: shippingFee,
-      quoteNote: "",
+
+      // 加強保護
+      protectionNeeded: protectionNeeded,
+      protectionPrice: protectionPrice,
+      protectionNote: protectionNote,
+
+      // 最終報價數據（物件格式）- 這是關鍵的修正
+      finalQuoteData: finalQuoteData,
+
+      // 最終總金額
+      finalTotalAmount: finalTotalAmount,
+
+      // 報價備註
+      quoteNote: quoteNote,
+
+      // 額外服務（物件格式）- 這是關鍵的修正
+      additionalServices: additionalServices,
     };
   }
 
@@ -729,8 +780,15 @@
       }
     });
 
-    document.getElementById("protection-needed").checked = false;
-    document.getElementById("protection-details").style.display = "none";
+    const protectionCheckbox = document.getElementById("protection-needed");
+    if (protectionCheckbox) {
+      protectionCheckbox.checked = false;
+    }
+
+    const protectionDetails = document.getElementById("protection-details");
+    if (protectionDetails) {
+      protectionDetails.style.display = "none";
+    }
 
     updatePriceSummary();
     showAlert("success", "表單已重置");
