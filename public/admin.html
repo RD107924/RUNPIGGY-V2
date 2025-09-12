@@ -140,6 +140,27 @@
         background-color: #138496;
       }
 
+      /* 新增手動建立訂單按鈕樣式 */
+      .btn-create-order {
+        background-color: #28a745;
+        color: white;
+        padding: 12px 25px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.3s;
+        font-weight: bold;
+      }
+
+      .btn-create-order:hover {
+        background-color: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
       /* 新增包裹預報統計卡片 */
       .parcel-stat-card {
         background-color: #f3e5f5;
@@ -186,6 +207,66 @@
         align-items: center;
       }
 
+      /* 訂單來源標記樣式 */
+      .source-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 11px;
+        margin-left: 5px;
+        font-weight: bold;
+      }
+
+      .source-badge.staff {
+        background-color: #28a745;
+        color: white;
+      }
+
+      .source-badge.customer {
+        background-color: #007bff;
+        color: white;
+      }
+
+      .source-badge.admin {
+        background-color: #ffc107;
+        color: #000;
+      }
+
+      /* 分享連結樣式 */
+      .share-link {
+        color: #1a73e8;
+        text-decoration: none;
+        font-size: 12px;
+      }
+
+      .share-link:hover {
+        text-decoration: underline;
+      }
+
+      /* 狀態標籤樣式 */
+      .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        margin-left: 5px;
+      }
+
+      .status-badge.quoted {
+        background-color: #ff9800;
+        color: white;
+      }
+
+      .status-badge.pending {
+        background-color: #2196f3;
+        color: white;
+      }
+
+      .status-badge.confirmed {
+        background-color: #4caf50;
+        color: white;
+      }
+
       @media (max-width: 768px) {
         .header-buttons {
           width: 100%;
@@ -210,6 +291,15 @@
         <h1>訂單管理儀表板</h1>
 
         <div class="header-buttons">
+          <!-- 手動建立訂單按鈕 (新增) -->
+          <a
+            href="/admin-create-order.html"
+            class="btn btn-create-order"
+            style="text-decoration: none"
+          >
+            ➕ 手動建立訂單
+          </a>
+
           <!-- 會員管理按鈕 -->
           <a
             href="/admin-members.html"
@@ -281,9 +371,26 @@
       <div class="filters">
         <select id="filter-status">
           <option value="">所有進度</option>
+          <option value="QUOTED">已報價</option>
+          <option value="PENDING">待確認</option>
+          <option value="CONFIRMED">已確認</option>
+          <option value="PROCESSING">處理中</option>
+          <option value="NEEDS_PURCHASE">待採購</option>
+          <option value="PURCHASED">已採購</option>
+          <option value="IN_WAREHOUSE">已入倉</option>
+          <option value="SHIPPED">已出貨</option>
+          <option value="IN_CUSTOMS">清關中</option>
+          <option value="DELIVERY_COMPLETE">已送達</option>
+          <option value="CANCELLED">已取消</option>
         </select>
         <select id="filter-user">
           <option value="">所有負責人</option>
+        </select>
+        <select id="filter-source">
+          <option value="">所有來源</option>
+          <option value="CUSTOMER">客戶提交</option>
+          <option value="STAFF">員工建立</option>
+          <option value="ADMIN">管理員建立</option>
         </select>
         <input
           type="text"
@@ -304,13 +411,16 @@
           <thead>
             <tr>
               <th>操作</th>
+              <th>訂單編號</th>
               <th>訂單時間</th>
+              <th>來源</th>
               <th>收件人</th>
               <th>聯絡電話</th>
               <th>總金額</th>
               <th>加值服務</th>
               <th>進度</th>
               <th>負責人</th>
+              <th>分享連結</th>
             </tr>
           </thead>
           <tbody id="ordersTableBody"></tbody>
@@ -330,7 +440,9 @@
     <script>
       // 頁面載入時的初始化
       document.addEventListener("DOMContentLoaded", async () => {
-        const token = localStorage.getItem("authToken");
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
 
         // 檢查登入狀態
         if (!token) {
@@ -340,11 +452,19 @@
 
         // 載入各項統計資料
         loadAllStatistics();
+
+        // 載入訂單列表
+        loadOrders();
+
+        // 載入篩選選項
+        loadFilterOptions();
       });
 
       // 載入所有統計資料
       async function loadAllStatistics() {
-        const token = localStorage.getItem("authToken");
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
 
         try {
           // 1. 載入包裹預報統計
@@ -353,9 +473,35 @@
           // 2. 載入會員統計
           loadMemberStatistics(token);
 
-          // 3. 載入訂單統計會在 admin.js 中處理
+          // 3. 載入訂單統計
+          loadOrderStatistics(token);
         } catch (error) {
           console.error("載入統計資料時發生錯誤:", error);
+        }
+      }
+
+      // 載入訂單統計
+      async function loadOrderStatistics(token) {
+        try {
+          const response = await fetch("/api/admin/stats", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const stats = await response.json();
+            document.getElementById("stats-today").textContent =
+              stats.newOrdersToday || 0;
+            document.getElementById("stats-pending").textContent =
+              stats.pendingOrders || 0;
+            document.getElementById("stats-month").textContent =
+              stats.totalOrdersThisMonth || 0;
+            document.getElementById("stats-services").textContent =
+              stats.servicesNeedQuote || 0;
+          }
+        } catch (error) {
+          console.log("無法載入訂單統計");
         }
       }
 
@@ -406,12 +552,414 @@
         }
       }
 
+      // 載入訂單列表
+      async function loadOrders() {
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
+
+        try {
+          const response = await fetch("/api/admin/orders", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const orders = await response.json();
+            renderOrders(orders);
+          }
+        } catch (error) {
+          console.error("載入訂單失敗:", error);
+        }
+      }
+
+      // 渲染訂單列表
+      function renderOrders(orders) {
+        const tbody = document.getElementById("ordersTableBody");
+        tbody.innerHTML = "";
+
+        if (orders.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="11" style="text-align: center; padding: 20px;">
+                暫無訂單資料
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        orders.forEach((order) => {
+          const row = document.createElement("tr");
+
+          // 來源標記
+          let sourceTag = "";
+          if (order.source === "STAFF") {
+            sourceTag = '<span class="source-badge staff">員工建立</span>';
+          } else if (order.source === "ADMIN") {
+            sourceTag = '<span class="source-badge admin">管理員建立</span>';
+          } else {
+            sourceTag = '<span class="source-badge customer">客戶提交</span>';
+          }
+
+          // 狀態顯示
+          let statusBadge = "";
+          if (order.status === "QUOTED") {
+            statusBadge = '<span class="status-badge quoted">已報價</span>';
+          } else if (order.status === "PENDING") {
+            statusBadge = '<span class="status-badge pending">待確認</span>';
+          } else if (order.status === "CONFIRMED") {
+            statusBadge = '<span class="status-badge confirmed">已確認</span>';
+          }
+
+          // 分享連結
+          let shareLink = "-";
+          if (order.shareToken && order.shareEnabled !== false) {
+            shareLink = `<a href="/order-share/${order.shareToken}" target="_blank" class="share-link">查看分享頁面</a>`;
+          }
+
+          // 加值服務標記
+          let servicesBadge = "";
+          if (order.additionalServices) {
+            servicesBadge = '<span class="service-badge">有加值服務</span>';
+          }
+
+          row.innerHTML = `
+            <td>
+              <button class="btn-view-detail" data-order-id="${
+                order.id
+              }" onclick="viewOrderDetail('${order.id}')">
+                查看詳情
+              </button>
+            </td>
+            <td>#${order.id}</td>
+            <td>${formatDateTime(order.createdAt)}</td>
+            <td>${sourceTag}</td>
+            <td>${order.recipientName || "-"}</td>
+            <td>${order.phone || "-"}</td>
+            <td>NT$ ${(
+              order.totalAmount ||
+              order.finalTotalAmount ||
+              0
+            ).toLocaleString()}</td>
+            <td>${servicesBadge}</td>
+            <td>
+              <select class="status-select" data-order-id="${
+                order.id
+              }" onchange="updateOrderStatus('${order.id}', this.value)">
+                <option value="QUOTED" ${
+                  order.status === "QUOTED" ? "selected" : ""
+                }>已報價</option>
+                <option value="PENDING" ${
+                  order.status === "PENDING" ? "selected" : ""
+                }>待確認</option>
+                <option value="CONFIRMED" ${
+                  order.status === "CONFIRMED" ? "selected" : ""
+                }>已確認</option>
+                <option value="PROCESSING" ${
+                  order.status === "PROCESSING" ? "selected" : ""
+                }>處理中</option>
+                <option value="NEEDS_PURCHASE" ${
+                  order.status === "NEEDS_PURCHASE" ? "selected" : ""
+                }>待採購</option>
+                <option value="PURCHASED" ${
+                  order.status === "PURCHASED" ? "selected" : ""
+                }>已採購</option>
+                <option value="IN_WAREHOUSE" ${
+                  order.status === "IN_WAREHOUSE" ? "selected" : ""
+                }>已入倉</option>
+                <option value="SHIPPED" ${
+                  order.status === "SHIPPED" ? "selected" : ""
+                }>已出貨</option>
+                <option value="IN_CUSTOMS" ${
+                  order.status === "IN_CUSTOMS" ? "selected" : ""
+                }>清關中</option>
+                <option value="DELIVERY_COMPLETE" ${
+                  order.status === "DELIVERY_COMPLETE" ? "selected" : ""
+                }>已送達</option>
+                <option value="CANCELLED" ${
+                  order.status === "CANCELLED" ? "selected" : ""
+                }>已取消</option>
+              </select>
+              ${statusBadge}
+            </td>
+            <td>
+              <select class="assign-select" data-order-id="${
+                order.id
+              }" onchange="assignOrder('${order.id}', this.value)">
+                <option value="">未指派</option>
+                <!-- 這裡會動態載入員工選項 -->
+              </select>
+            </td>
+            <td>${shareLink}</td>
+          </tr>`;
+
+          tbody.appendChild(row);
+        });
+      }
+
+      // 載入篩選選項
+      async function loadFilterOptions() {
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
+
+        try {
+          // 載入員工列表
+          const response = await fetch("/api/admin/users", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const users = await response.json();
+            const filterUser = document.getElementById("filter-user");
+            const assignSelects = document.querySelectorAll(".assign-select");
+
+            users.forEach((user) => {
+              const option = document.createElement("option");
+              option.value = user.id;
+              option.textContent = user.fullName || user.username;
+              filterUser.appendChild(option.cloneNode(true));
+
+              // 同時更新所有指派選單
+              assignSelects.forEach((select) => {
+                select.appendChild(option.cloneNode(true));
+              });
+            });
+          }
+        } catch (error) {
+          console.error("載入員工列表失敗:", error);
+        }
+      }
+
+      // 查看訂單詳情
+      async function viewOrderDetail(orderId) {
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
+
+        try {
+          const response = await fetch(`/api/admin/orders/${orderId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const order = await response.json();
+            showOrderDetailModal(order);
+          }
+        } catch (error) {
+          console.error("載入訂單詳情失敗:", error);
+        }
+      }
+
+      // 顯示訂單詳情 Modal
+      function showOrderDetailModal(order) {
+        const modal = document.getElementById("order-detail-modal");
+        const modalBody = document.getElementById("modal-body");
+
+        let detailHtml = `
+          <div style="padding: 20px;">
+            <h3>訂單 #${order.id}</h3>
+            <p><strong>收件人：</strong>${order.recipientName}</p>
+            <p><strong>電話：</strong>${order.phone}</p>
+            <p><strong>地址：</strong>${order.address}</p>
+            <p><strong>Email：</strong>${order.email || "未提供"}</p>
+            <p><strong>總金額：</strong>NT$ ${(
+              order.totalAmount ||
+              order.finalTotalAmount ||
+              0
+            ).toLocaleString()}</p>
+            <p><strong>建立時間：</strong>${formatDateTime(order.createdAt)}</p>
+            <p><strong>狀態：</strong>${order.status}</p>
+        `;
+
+        if (order.shareToken) {
+          detailHtml += `
+            <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 5px;">
+              <h4>分享連結</h4>
+              <p>
+                <a href="/order-share/${order.shareToken}" target="_blank" style="color: #1a73e8;">
+                  ${window.location.origin}/order-share/${order.shareToken}
+                </a>
+              </p>
+              <button onclick="copyShareLink('${order.shareToken}')" class="btn btn-primary" style="margin-top: 10px;">
+                複製連結
+              </button>
+            </div>
+          `;
+        }
+
+        detailHtml += `</div>`;
+
+        modalBody.innerHTML = detailHtml;
+        modal.style.display = "flex";
+      }
+
+      // 更新訂單狀態
+      async function updateOrderStatus(orderId, status) {
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
+
+        try {
+          const response = await fetch(`/api/admin/orders/${orderId}/status`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ status }),
+          });
+
+          if (response.ok) {
+            console.log("訂單狀態更新成功");
+          }
+        } catch (error) {
+          console.error("更新訂單狀態失敗:", error);
+        }
+      }
+
+      // 指派訂單
+      async function assignOrder(orderId, userId) {
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
+
+        try {
+          const response = await fetch(`/api/admin/orders/${orderId}/assign`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userId: userId || null }),
+          });
+
+          if (response.ok) {
+            console.log("訂單指派成功");
+          }
+        } catch (error) {
+          console.error("指派訂單失敗:", error);
+        }
+      }
+
+      // 複製分享連結
+      function copyShareLink(shareToken) {
+        const url = `${window.location.origin}/order-share/${shareToken}`;
+        navigator.clipboard
+          .writeText(url)
+          .then(() => {
+            alert("連結已複製到剪貼簿！");
+          })
+          .catch((err) => {
+            console.error("複製失敗:", err);
+          });
+      }
+
+      // 格式化日期時間
+      function formatDateTime(dateString) {
+        if (!dateString) return "-";
+        const date = new Date(dateString);
+        return date.toLocaleString("zh-TW", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      // 關閉 Modal
+      document
+        .querySelector(".modal-close-btn")
+        ?.addEventListener("click", () => {
+          document.getElementById("order-detail-modal").style.display = "none";
+        });
+
+      // 點擊 Modal 外部關閉
+      document
+        .getElementById("order-detail-modal")
+        ?.addEventListener("click", (e) => {
+          if (e.target === e.currentTarget) {
+            e.currentTarget.style.display = "none";
+          }
+        });
+
+      // 登出功能
+      document.getElementById("logoutBtn")?.addEventListener("click", () => {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("operatorToken");
+        window.location.href = "/login.html";
+      });
+
+      // 篩選功能
+      document
+        .getElementById("filter-status")
+        ?.addEventListener("change", filterOrders);
+      document
+        .getElementById("filter-user")
+        ?.addEventListener("change", filterOrders);
+      document
+        .getElementById("filter-source")
+        ?.addEventListener("change", filterOrders);
+      document
+        .getElementById("filter-has-services")
+        ?.addEventListener("change", filterOrders);
+      document
+        .getElementById("search-input")
+        ?.addEventListener("input", filterOrders);
+
+      // 執行篩選
+      async function filterOrders() {
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
+        const status = document.getElementById("filter-status").value;
+        const userId = document.getElementById("filter-user").value;
+        const source = document.getElementById("filter-source").value;
+        const hasServices = document.getElementById(
+          "filter-has-services"
+        ).checked;
+        const search = document.getElementById("search-input").value;
+
+        let url = "/api/admin/orders?";
+        if (status) url += `status=${status}&`;
+        if (userId) url += `assignedToId=${userId}&`;
+        if (source) url += `source=${source}&`;
+        if (hasServices) url += `hasServices=true&`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+
+        try {
+          const response = await fetch(url, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const orders = await response.json();
+            renderOrders(orders);
+          }
+        } catch (error) {
+          console.error("篩選訂單失敗:", error);
+        }
+      }
+
       // 定期更新統計資料（每30秒）
       setInterval(() => {
-        const token = localStorage.getItem("authToken");
+        const token =
+          localStorage.getItem("authToken") ||
+          localStorage.getItem("operatorToken");
         if (token) {
           loadParcelStatistics(token);
           loadMemberStatistics(token);
+          loadOrderStatistics(token);
+          loadOrders();
         }
       }, 30000);
     </script>

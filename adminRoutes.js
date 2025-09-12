@@ -1,8 +1,9 @@
-// adminRoutes.js (完整版會員管理功能)
+// adminRoutes.js (完整版會員管理功能 + 手動建立訂單)
 require("dotenv").config(); // 確保讀取環境變數
 
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -16,6 +17,11 @@ const OrderStatus = {
   SHIPPED: "SHIPPED",
   IN_CUSTOMS: "IN_CUSTOMS",
   DELIVERY_COMPLETE: "DELIVERY_COMPLETE",
+  QUOTED: "QUOTED", // 新增：已報價狀態
+  PENDING: "PENDING", // 新增：待確認狀態
+  CONFIRMED: "CONFIRMED", // 新增：已確認狀態
+  PROCESSING: "PROCESSING", // 新增：處理中狀態
+  CANCELLED: "CANCELLED", // 新增：已取消狀態
 };
 
 // === 員工管理 ===
@@ -113,14 +119,14 @@ router.get("/stats", async (req, res) => {
       servicesNeedQuote,
     });
   } catch (error) {
-    console.error("獲取統計數據失敗:", error);
-    res.status(500).json({ error: "無法獲取統計數據" });
+    console.error("取得統計數據失敗:", error);
+    res.status(500).json({ error: "無法取得統計數據" });
   }
 });
 
 // === 訂單管理 (處理 JSON 字串) ===
 router.get("/orders", async (req, res) => {
-  console.log("收到獲取訂單的請求，開始查詢資料庫...");
+  console.log("收到取得訂單的請求，開始查詢資料庫...");
   try {
     const { status, assignedToId, search, customerId, hasServices } = req.query;
     const whereClause = {};
@@ -167,7 +173,7 @@ router.get("/orders", async (req, res) => {
       },
     });
 
-    console.log(`查詢成功！在資料庫中找到了 ${ordersFromDb.length} 筆訂單。`);
+    console.log(`查詢成功，在資料庫中找到了 ${ordersFromDb.length} 筆訂單。`);
 
     // 解析 JSON 字串並處理加值服務
     const ordersWithParsedJson = ordersFromDb.map((order) => ({
@@ -180,12 +186,338 @@ router.get("/orders", async (req, res) => {
         order.additionalServices && typeof order.additionalServices === "string"
           ? JSON.parse(order.additionalServices)
           : order.additionalServices,
+      finalQuoteData:
+        order.finalQuoteData && typeof order.finalQuoteData === "string"
+          ? JSON.parse(order.finalQuoteData)
+          : order.finalQuoteData,
     }));
 
     res.json(ordersWithParsedJson);
   } catch (error) {
     console.error("查詢訂單時發生嚴重錯誤:", error);
     res.status(500).json({ error: "查詢訂單時伺服器發生錯誤" });
+  }
+});
+
+// === 手動建立訂單功能 (新增) ===
+
+/**
+ * 手動建立訂單
+ * POST /api/admin/orders/manual
+ */
+router.post("/orders/manual", async (req, res) => {
+  try {
+    const {
+      // 客戶資訊
+      recipientName,
+      phone,
+      email,
+      lineNickname,
+      address,
+      idNumber,
+      taxId,
+
+      // 計算結果
+      calculationResult,
+
+      // 加值服務
+      additionalServices,
+      serviceNote,
+
+      // 訂單設定
+      status = "QUOTED",
+      paymentStatus = "UNPAID",
+      internalNote,
+
+      // 系統標記
+      createdBy = "STAFF",
+      shareEnabled = true,
+    } = req.body;
+
+    // 驗證必要欄位
+    if (!recipientName || !phone || !address || !calculationResult) {
+      return res.status(400).json({
+        error: "缺少必要欄位",
+        required: ["recipientName", "phone", "address", "calculationResult"],
+      });
+    }
+
+    // 產生分享 token
+    const shareToken = crypto.randomBytes(32).toString("hex");
+
+    // 建立訂單
+    const order = await prisma.shipmentOrder.create({
+      data: {
+        // 客戶資訊
+        recipientName,
+        phone,
+        email: email || null,
+        lineNickname: lineNickname || "工作人員建立",
+        address,
+        idNumber: idNumber || null,
+        taxId: taxId || null,
+
+        // 計算結果（儲存為 JSON）
+        calculationResult: calculationResult,
+
+        // 加值服務
+        additionalServices: additionalServices || null,
+        serviceNote: serviceNote || null,
+
+        // 訂單狀態
+        status: status,
+        paymentStatus: paymentStatus || "UNPAID",
+
+        // 內部資訊
+        internalNote: internalNote || null,
+        assignedToId: req.user ? req.user.id : null,
+
+        // 分享功能
+        shareToken: shareToken,
+        shareEnabled: shareEnabled,
+
+        // 系統標記
+        source: createdBy,
+
+        // 如果已報價，記錄報價金額
+        finalQuoteData:
+          status === "QUOTED"
+            ? {
+                shipping: calculationResult.baseFreight || 0,
+                remote: calculationResult.remoteFee || 0,
+                overweight: calculationResult.overweightFee || 0,
+                oversized: calculationResult.oversizedFee || 0,
+                service: calculationResult.serviceFee || 0,
+                total: calculationResult.totalAmount || 0,
+              }
+            : null,
+
+        finalTotalAmount: calculationResult.totalAmount || 0,
+        totalAmount: calculationResult.totalAmount || 0,
+      },
+    });
+
+    // 產生分享連結
+    const shareUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/order-share/${shareToken}`;
+
+    // 記錄操作日誌
+    console.log(
+      `[手動建立訂單] ID: ${order.id}, 建立者: ${
+        req.user?.username || "Unknown"
+      }, 客戶: ${recipientName}`
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "訂單建立成功",
+      orderId: order.id,
+      shareToken: shareToken,
+      shareUrl: shareUrl,
+      order: {
+        id: order.id,
+        recipientName: order.recipientName,
+        phone: order.phone,
+        address: order.address,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        totalAmount: order.finalTotalAmount,
+        createdAt: order.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("建立訂單失敗:", error);
+    res.status(500).json({
+      error: "建立訂單失敗",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * 更新手動建立的訂單
+ * PUT /api/admin/orders/manual/:orderId
+ */
+router.put("/orders/manual/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const updateData = req.body;
+
+    // 檢查訂單是否存在
+    const existingOrder = await prisma.shipmentOrder.findUnique({
+      where: { id: parseInt(orderId) },
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({ error: "訂單不存在" });
+    }
+
+    // 只允許修改員工建立的訂單
+    if (existingOrder.source !== "STAFF") {
+      return res.status(403).json({
+        error: "只能修改員工建立的訂單",
+      });
+    }
+
+    // 更新訂單
+    const updatedOrder = await prisma.shipmentOrder.update({
+      where: { id: parseInt(orderId) },
+      data: {
+        recipientName: updateData.recipientName || existingOrder.recipientName,
+        phone: updateData.phone || existingOrder.phone,
+        email:
+          updateData.email !== undefined
+            ? updateData.email
+            : existingOrder.email,
+        address: updateData.address || existingOrder.address,
+        calculationResult:
+          updateData.calculationResult || existingOrder.calculationResult,
+        status: updateData.status || existingOrder.status,
+        paymentStatus: updateData.paymentStatus || existingOrder.paymentStatus,
+        internalNote:
+          updateData.internalNote !== undefined
+            ? updateData.internalNote
+            : existingOrder.internalNote,
+        finalTotalAmount:
+          updateData.calculationResult?.totalAmount ||
+          existingOrder.finalTotalAmount,
+        totalAmount:
+          updateData.calculationResult?.totalAmount ||
+          existingOrder.totalAmount,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: "訂單更新成功",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("更新訂單失敗:", error);
+    res.status(500).json({
+      error: "更新訂單失敗",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * 取得員工建立的訂單列表
+ * GET /api/admin/orders/manual
+ */
+router.get("/orders/manual", async (req, res) => {
+  try {
+    const orders = await prisma.shipmentOrder.findMany({
+      where: {
+        source: "STAFF",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        recipientName: true,
+        phone: true,
+        address: true,
+        status: true,
+        paymentStatus: true,
+        finalTotalAmount: true,
+        totalAmount: true,
+        shareToken: true,
+        shareEnabled: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      count: orders.length,
+      orders: orders,
+    });
+  } catch (error) {
+    console.error("取得訂單列表失敗:", error);
+    res.status(500).json({
+      error: "取得訂單列表失敗",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * 停用/啟用分享連結
+ * PATCH /api/admin/orders/:orderId/share
+ */
+router.patch("/orders/:orderId/share", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { enabled } = req.body;
+
+    const order = await prisma.shipmentOrder.update({
+      where: { id: parseInt(orderId) },
+      data: {
+        shareEnabled: enabled,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `分享連結已${enabled ? "啟用" : "停用"}`,
+      shareEnabled: order.shareEnabled,
+    });
+  } catch (error) {
+    console.error("更新分享狀態失敗:", error);
+    res.status(500).json({
+      error: "更新分享狀態失敗",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+});
+
+/**
+ * 重新產生分享連結
+ * POST /api/admin/orders/:orderId/regenerate-share
+ */
+router.post("/orders/:orderId/regenerate-share", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // 產生新的分享 token
+    const newShareToken = crypto.randomBytes(32).toString("hex");
+
+    const order = await prisma.shipmentOrder.update({
+      where: { id: parseInt(orderId) },
+      data: {
+        shareToken: newShareToken,
+        shareEnabled: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    const shareUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/order-share/${newShareToken}`;
+
+    res.json({
+      success: true,
+      message: "分享連結已重新產生",
+      shareToken: newShareToken,
+      shareUrl: shareUrl,
+    });
+  } catch (error) {
+    console.error("重新產生分享連結失敗:", error);
+    res.status(500).json({
+      error: "重新產生分享連結失敗",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 });
 
@@ -454,7 +786,7 @@ router.put("/customers/:id/status", async (req, res) => {
     // 記錄操作日誌
     console.log(
       `[會員狀態變更] ${new Date().toISOString()} - 管理員 ${
-        req.user.username
+        req.user?.username || "Unknown"
       } ` +
         `將會員 ${updatedCustomer.email} 狀態變更為 ${
           isActive ? "啟用" : "停用"
@@ -468,7 +800,7 @@ router.put("/customers/:id/status", async (req, res) => {
           action: "CUSTOMER_STATUS_CHANGE",
           targetType: "CUSTOMER",
           targetId: customerId,
-          performedById: req.user.id,
+          performedById: req.user?.id || null,
           details: JSON.stringify({
             customerEmail: updatedCustomer.email,
             newStatus: isActive ? "ACTIVE" : "INACTIVE",
@@ -497,7 +829,11 @@ router.put("/customers/:id/reset-password", async (req, res) => {
     const DEFAULT_PASSWORD = "8888"; // 您要求的預設密碼
 
     // 確認執行者是管理員角色
-    if (req.user.role !== "ADMIN" && req.user.role !== "SUPER_ADMIN") {
+    if (
+      req.user &&
+      req.user.role !== "ADMIN" &&
+      req.user.role !== "SUPER_ADMIN"
+    ) {
       console.log(
         `[密碼重設拒絕] ${new Date().toISOString()} - 使用者 ${
           req.user.username
@@ -560,12 +896,12 @@ router.put("/customers/:id/reset-password", async (req, res) => {
           action: "PASSWORD_RESET",
           targetType: "CUSTOMER",
           targetId: customerId,
-          performedById: req.user.id,
+          performedById: req.user?.id || null,
           details: JSON.stringify({
             customerEmail: customer.email,
             customerName: customer.name,
             resetAt: new Date(),
-            adminUsername: req.user.username,
+            adminUsername: req.user?.username || "Unknown",
           }),
           ipAddress: req.ip || req.connection?.remoteAddress,
           userAgent: req.headers["user-agent"],
@@ -578,8 +914,11 @@ router.put("/customers/:id/reset-password", async (req, res) => {
     // 記錄到 server log
     console.log(
       `[密碼重設成功] ${new Date().toISOString()} - 管理員 ${
-        req.user.username
-      } ` + `(ID: ${req.user.id}) 已將會員 ${customer.email} 的密碼重設為預設值`
+        req.user?.username || "Unknown"
+      } ` +
+        `(ID: ${req.user?.id || "Unknown"}) 已將會員 ${
+          customer.email
+        } 的密碼重設為預設值`
     );
 
     res.json({
@@ -603,7 +942,11 @@ router.put("/customers/:id/reset-password", async (req, res) => {
 router.get("/customers/export/csv", async (req, res) => {
   try {
     // 檢查權限
-    if (req.user.role !== "ADMIN" && req.user.role !== "SUPER_ADMIN") {
+    if (
+      req.user &&
+      req.user.role !== "ADMIN" &&
+      req.user.role !== "SUPER_ADMIN"
+    ) {
       return res.status(403).json({ error: "只有管理員可以匯出會員資料" });
     }
 
@@ -745,7 +1088,7 @@ router.put("/customers/:id", async (req, res) => {
   }
 });
 
-// === 原有功能（繼續保留） ===
+// === 原有功能（繼續保留）===
 
 // 手動為會員建立訂單（管理員代客下單）
 router.post("/customers/:id/orders", async (req, res) => {
@@ -788,6 +1131,7 @@ router.post("/customers/:id/orders", async (req, res) => {
           ? JSON.stringify(additionalServices)
           : null,
         status: "NEEDS_PURCHASE",
+        source: "ADMIN", // 標記為管理員建立
       },
     });
 

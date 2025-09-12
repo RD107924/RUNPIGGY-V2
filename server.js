@@ -676,3 +676,134 @@ process.on("SIGINT", async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+// 手動建立訂單頁面 (新增)
+app.get("/admin-create-order.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin-create-order.html"));
+});
+
+// 編輯訂單頁面 (新增) - 用於修改已建立的訂單
+app.get("/admin-edit-order/:orderId", (req, res) => {
+  const filePath = path.join(__dirname, "public", "admin-edit-order.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    // 如果編輯頁面不存在，暫時重定向到建立頁面
+    res.redirect("/admin-create-order.html");
+  }
+});
+
+// 原有的路由保持不變
+app.get("/quote.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "quote.html"));
+});
+
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
+app.get("/admin-parcels", (req, res) => {
+  const filePath = path.join(__dirname, "public", "admin-parcels.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.redirect("/admin");
+  }
+});
+
+app.get("/admin-parcel-convert/:parcelId", (req, res) => {
+  const filePath = path.join(__dirname, "public", "admin-parcel-convert.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("包裹轉訂單頁面尚未建立");
+  }
+});
+
+app.get("/register.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "register.html"));
+});
+
+app.get("/login.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
+});
+
+app.get("/customer.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "customer.html"));
+});
+
+app.get("/parcel.html", (req, res) => {
+  const filePath = path.join(__dirname, "public", "parcel.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.redirect("/customer.html");
+  }
+});
+
+app.get("/parcel-public", (req, res) => {
+  const filePath = path.join(__dirname, "public", "parcel-public.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send("包裹預報頁面尚未建立");
+  }
+});
+
+app.get("/order.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "order.html"));
+});
+
+app.get("/order-share/:shareToken", (req, res) => {
+  const filePath = path.join(__dirname, "public", "order-share.html");
+  const fs = require("fs");
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>訂單分享</title>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+          }
+          .error-container {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          h1 { color: #333; }
+          p { color: #666; margin: 20px 0; }
+          a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="error-container">
+          <h1>訂單分享功能建置中</h1>
+          <p>此功能即將上線，敬請期待！</p>
+          <a href="/">返回首頁</a>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+});

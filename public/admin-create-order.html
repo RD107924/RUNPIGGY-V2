@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>手動建立訂單 - 小跑豬後台管理</title>
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* 專用樣式 */
+      .create-order-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e0e0e0;
+      }
+
+      .form-section {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+      }
+
+      .form-section h3 {
+        color: #1a73e8;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e3f2fd;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .form-group label .required {
+        color: #dc3545;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+      }
+
+      /* 商品項目樣式 */
+      .item-container {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border: 2px solid #dee2e6;
+        position: relative;
+      }
+
+      .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+      }
+
+      .item-title {
+        font-weight: bold;
+        color: #495057;
+        font-size: 16px;
+      }
+
+      .btn-remove-item {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .btn-remove-item:hover {
+        background: #c82333;
+      }
+
+      /* 計算方式切換 */
+      .calc-method-toggle {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+
+      .calc-method-toggle label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+      }
+
+      .calc-method-toggle input[type="radio"] {
+        margin-right: 5px;
+      }
+
+      /* 計算結果顯示 */
+      .calculation-summary {
+        background: #e3f2fd;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+      }
+
+      .calculation-summary h4 {
+        color: #1565c0;
+        margin-bottom: 15px;
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #bbdefb;
+      }
+
+      .summary-row:last-child {
+        border-bottom: none;
+        font-weight: bold;
+        font-size: 18px;
+        color: #1565c0;
+        padding-top: 15px;
+        margin-top: 10px;
+        border-top: 2px solid #1976d2;
+      }
+
+      /* 按鈕樣式 */
+      .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+      }
+
+      .btn-primary {
+        background: #1a73e8;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .btn-primary:hover {
+        background: #1557b0;
+      }
+
+      .btn-secondary {
+        background: #6c757d;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .btn-secondary:hover {
+        background: #5a6268;
+      }
+
+      .btn-success {
+        background: #28a745;
+        color: white;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .btn-success:hover {
+        background: #218838;
+      }
+
+      /* 分享區塊 */
+      .share-section {
+        display: none;
+        background: #d4edda;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+        border: 2px solid #c3e6cb;
+      }
+
+      .share-section.active {
+        display: block;
+      }
+
+      .share-url {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .share-url input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #c3e6cb;
+        border-radius: 5px;
+        background: white;
+      }
+
+      .btn-copy {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .btn-copy:hover {
+        background: #218838;
+      }
+
+      /* 提示訊息 */
+      .alert {
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .alert.active {
+        display: block;
+      }
+
+      .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      /* 服務項目選擇 */
+      .service-checkbox {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        cursor: pointer;
+      }
+
+      .service-checkbox:hover {
+        background: #e9ecef;
+      }
+
+      .service-checkbox input[type="checkbox"] {
+        margin-right: 10px;
+      }
+
+      .service-checkbox label {
+        cursor: pointer;
+        margin: 0;
+      }
+
+      /* 載入中動畫 */
+      .loading {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .loading.active {
+        display: flex;
+      }
+
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #1a73e8;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* 偏遠地區選擇 */
+      .remote-area-selector {
+        margin-top: 10px;
+      }
+
+      .remote-tag {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-left: 10px;
+      }
+
+      .remote-high {
+        background: #dc3545;
+        color: white;
+      }
+
+      .remote-medium {
+        background: #ffc107;
+        color: #000;
+      }
+
+      .remote-low {
+        background: #28a745;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="create-order-container">
+      <!-- 頁首 -->
+      <div class="header-section">
+        <div style="display: flex; align-items: center; gap: 20px">
+          <img
+            src="/assets/logo.png"
+            alt="小跑豬 LOGO"
+            class="header-logo"
+            style="height: 50px"
+          />
+          <h1>手動建立訂單</h1>
+        </div>
+        <div>
+          <button class="btn-secondary" onclick="window.location.href='/admin'">
+            ← 返回管理頁面
+          </button>
+        </div>
+      </div>
+
+      <!-- 提示訊息 -->
+      <div id="alert" class="alert"></div>
+
+      <!-- 客戶資訊 -->
+      <div class="form-section">
+        <h3>📋 客戶資訊</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>收件人姓名 <span class="required">*</span></label>
+            <input
+              type="text"
+              class="form-control"
+              id="recipientName"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>聯絡電話 <span class="required">*</span></label>
+            <input type="tel" class="form-control" id="phone" required />
+          </div>
+          <div class="form-group">
+            <label>電子郵件</label>
+            <input type="email" class="form-control" id="email" />
+          </div>
+          <div class="form-group">
+            <label>LINE 暱稱</label>
+            <input type="text" class="form-control" id="lineNickname" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>收件地址 <span class="required">*</span></label>
+          <input type="text" class="form-control" id="address" required />
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>身分證字號（清關用）</label>
+            <input
+              type="text"
+              class="form-control"
+              id="idNumber"
+              placeholder="選填"
+            />
+          </div>
+          <div class="form-group">
+            <label>統一編號（公司戶）</label>
+            <input
+              type="text"
+              class="form-control"
+              id="taxId"
+              placeholder="選填"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- 運送地區設定 -->
+      <div class="form-section">
+        <h3>🚚 運送設定</h3>
+        <div class="form-group">
+          <label>運送地區 <span class="required">*</span></label>
+          <select
+            class="form-control"
+            id="deliveryLocation"
+            onchange="updateRemoteAreaRate()"
+          >
+            <option value="">請選擇運送地區</option>
+            <optgroup label="一般地區">
+              <option value="0">台北市</option>
+              <option value="0">新北市</option>
+              <option value="0">桃園市</option>
+              <option value="0">台中市</option>
+              <option value="0">台南市</option>
+              <option value="0">高雄市</option>
+            </optgroup>
+            <optgroup label="偏遠地區 - 加成10%">
+              <option value="0.1">基隆市</option>
+              <option value="0.1">新竹市</option>
+              <option value="0.1">新竹縣</option>
+              <option value="0.1">苗栗縣</option>
+              <option value="0.1">彰化縣</option>
+              <option value="0.1">南投縣</option>
+              <option value="0.1">雲林縣</option>
+              <option value="0.1">嘉義市</option>
+              <option value="0.1">嘉義縣</option>
+              <option value="0.1">屏東縣</option>
+              <option value="0.1">宜蘭縣</option>
+            </optgroup>
+            <optgroup label="偏遠地區 - 加成20%">
+              <option value="0.2">花蓮縣</option>
+              <option value="0.2">台東縣</option>
+            </optgroup>
+            <optgroup label="離島地區 - 加成30%">
+              <option value="0.3">澎湖縣</option>
+              <option value="0.3">金門縣</option>
+              <option value="0.3">連江縣（馬祖）</option>
+              <option value="0.3">綠島</option>
+              <option value="0.3">蘭嶼</option>
+              <option value="0.3">小琉球</option>
+            </optgroup>
+          </select>
+          <div id="remoteAreaInfo" style="margin-top: 10px; display: none">
+            <span id="remoteAreaTag"></span>
+            <span
+              id="remoteAreaText"
+              style="color: #666; margin-left: 10px"
+            ></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 商品明細 -->
+      <div class="form-section">
+        <h3>📦 商品明細</h3>
+        <div id="itemsContainer">
+          <!-- 商品項目將動態加入這裡 -->
+        </div>
+        <button class="btn-primary" onclick="addItem()">+ 新增商品</button>
+      </div>
+
+      <!-- 加值服務 -->
+      <div class="form-section">
+        <h3>✨ 加值服務</h3>
+        <div class="form-grid">
+          <div class="service-checkbox">
+            <input
+              type="checkbox"
+              id="service-collect"
+              onchange="updateCalculation()"
+            />
+            <label for="service-collect">代收貨款</label>
+          </div>
+          <div class="service-checkbox">
+            <input
+              type="checkbox"
+              id="service-insurance"
+              onchange="updateCalculation()"
+            />
+            <label for="service-insurance">貨物保險</label>
+          </div>
+          <div class="service-checkbox">
+            <input
+              type="checkbox"
+              id="service-urgent"
+              onchange="updateCalculation()"
+            />
+            <label for="service-urgent">急件處理</label>
+          </div>
+          <div class="service-checkbox">
+            <input
+              type="checkbox"
+              id="service-install"
+              onchange="updateCalculation()"
+            />
+            <label for="service-install">到府安裝</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>服務備註</label>
+          <textarea
+            class="form-control"
+            id="serviceNote"
+            rows="3"
+            placeholder="請輸入加值服務的特殊需求..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 訂單設定 -->
+      <div class="form-section">
+        <h3>⚙️ 訂單設定</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>訂單狀態 <span class="required">*</span></label>
+            <select class="form-control" id="orderStatus">
+              <option value="QUOTED">已報價</option>
+              <option value="PENDING">待確認</option>
+              <option value="CONFIRMED">已確認</option>
+              <option value="PROCESSING">處理中</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>付款狀態</label>
+            <select class="form-control" id="paymentStatus">
+              <option value="UNPAID">未付款</option>
+              <option value="DEPOSIT">已付訂金</option>
+              <option value="PAID">已付全額</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>內部備註（客戶不可見）</label>
+          <textarea
+            class="form-control"
+            id="internalNote"
+            rows="3"
+            placeholder="僅供內部使用的備註..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- 費用計算摘要 -->
+      <div class="form-section">
+        <h3>💰 費用計算</h3>
+        <div class="calculation-summary" id="calculationSummary">
+          <h4>費用明細</h4>
+          <div class="summary-row">
+            <span>基本運費：</span>
+            <span id="baseFreight">NT$ 0</span>
+          </div>
+          <div class="summary-row">
+            <span>偏遠地區加成：</span>
+            <span id="remoteFee">NT$ 0</span>
+          </div>
+          <div class="summary-row">
+            <span>超重附加費：</span>
+            <span id="overweightFee">NT$ 0</span>
+          </div>
+          <div class="summary-row">
+            <span>超長附加費：</span>
+            <span id="oversizedFee">NT$ 0</span>
+          </div>
+          <div class="summary-row">
+            <span>加值服務費：</span>
+            <span id="serviceFee">NT$ 0</span>
+          </div>
+          <div class="summary-row">
+            <span>訂單總金額：</span>
+            <span id="totalAmount">NT$ 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div class="action-buttons">
+        <button class="btn-secondary" onclick="resetForm()">清除表單</button>
+        <button class="btn-primary" onclick="previewOrder()">預覽訂單</button>
+        <button class="btn-success" onclick="createOrder()">
+          建立訂單並分享
+        </button>
+      </div>
+
+      <!-- 分享區塊 -->
+      <div class="share-section" id="shareSection">
+        <h4>✅ 訂單建立成功！</h4>
+        <p>訂單已成功建立，您可以將以下連結分享給客戶查看訂單詳情：</p>
+        <div class="share-url">
+          <input type="text" id="shareUrl" readonly />
+          <button class="btn-copy" onclick="copyShareUrl()">複製連結</button>
+        </div>
+        <div style="margin-top: 15px">
+          <button class="btn-primary" onclick="viewOrder()">查看訂單</button>
+          <button class="btn-secondary" onclick="createNewOrder()">
+            建立新訂單
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 全域變數
+      let itemCount = 0;
+      let currentOrder = null;
+      const VOLUME_DIVISOR = 28316.85;
+      const CBM_TO_CAI_FACTOR = 35.315;
+
+      // 運輸類型資料
+      const rateOptions = [
+        { id: 1, name: "單純報關（平台購買如淘寶、抖音、小紅書）", rate: 360 },
+        { id: 2, name: "普貨（無牌子、白牌、較大量產品）", rate: 380 },
+        { id: 3, name: "家用二手物品", rate: 480 },
+        { id: 4, name: "高單價商品（有品牌或原廠購買）", rate: 580 },
+        { id: 5, name: "高單價產品(奢侈品)、高風險商品", rate: 680 },
+      ];
+
+      // 初始化
+      document.addEventListener("DOMContentLoaded", function () {
+        // 檢查登入狀態
+        const token = localStorage.getItem("operatorToken");
+        if (!token) {
+          alert("請先登入");
+          window.location.href = "/login.html";
+          return;
+        }
+
+        // 新增第一個商品項目
+        addItem();
+      });
+
+      // 新增商品項目
+      function addItem() {
+        itemCount++;
+        const container = document.getElementById("itemsContainer");
+
+        const itemHtml = `
+                <div class="item-container" id="item-${itemCount}">
+                    <div class="item-header">
+                        <span class="item-title">商品 #${itemCount}</span>
+                        ${
+                          itemCount > 1
+                            ? `<button class="btn-remove-item" onclick="removeItem(${itemCount})">移除</button>`
+                            : ""
+                        }
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>商品名稱 <span class="required">*</span></label>
+                            <input type="text" class="form-control item-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>數量 <span class="required">*</span></label>
+                            <input type="number" class="form-control item-quantity" min="1" value="1" onchange="updateCalculation()">
+                        </div>
+                        <div class="form-group">
+                            <label>運輸類型 <span class="required">*</span></label>
+                            <select class="form-control item-rate" onchange="updateCalculation()">
+                                <option value="">請選擇運輸類型</option>
+                                ${rateOptions
+                                  .map(
+                                    (rate) =>
+                                      `<option value="${rate.id}">【${rate.rate}/材】${rate.name}</option>`
+                                  )
+                                  .join("")}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="calc-method-toggle">
+                        <label>
+                            <input type="radio" name="calc-method-${itemCount}" value="dimensions" checked onchange="toggleCalcMethod(${itemCount})">
+                            輸入尺寸
+                        </label>
+                        <label>
+                            <input type="radio" name="calc-method-${itemCount}" value="cbm" onchange="toggleCalcMethod(${itemCount})">
+                            輸入立方米
+                        </label>
+                    </div>
+                    
+                    <div class="form-grid" id="dimensions-${itemCount}">
+                        <div class="form-group">
+                            <label>長度 (公分)</label>
+                            <input type="number" class="form-control item-length" min="0" step="0.1" onchange="updateCalculation()">
+                        </div>
+                        <div class="form-group">
+                            <label>寬度 (公分)</label>
+                            <input type="number" class="form-control item-width" min="0" step="0.1" onchange="updateCalculation()">
+                        </div>
+                        <div class="form-group">
+                            <label>高度 (公分)</label>
+                            <input type="number" class="form-control item-height" min="0" step="0.1" onchange="updateCalculation()">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="cbm-${itemCount}" style="display: none;">
+                        <label>立方米</label>
+                        <input type="number" class="form-control item-cbm" min="0" step="0.001" onchange="updateCalculation()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>重量 (公斤)</label>
+                        <input type="number" class="form-control item-weight" min="0" step="0.1" placeholder="選填，用於計算超重費" onchange="updateCalculation()">
+                    </div>
+                </div>
+            `;
+
+        container.insertAdjacentHTML("beforeend", itemHtml);
+        updateCalculation();
+      }
+
+      // 移除商品項目
+      function removeItem(itemId) {
+        if (confirm("確定要移除此商品嗎？")) {
+          document.getElementById(`item-${itemId}`).remove();
+          updateCalculation();
+        }
+      }
+
+      // 切換計算方式
+      function toggleCalcMethod(itemId) {
+        const dimensions = document.getElementById(`dimensions-${itemId}`);
+        const cbm = document.getElementById(`cbm-${itemId}`);
+        const method = document.querySelector(
+          `input[name="calc-method-${itemId}"]:checked`
+        ).value;
+
+        if (method === "dimensions") {
+          dimensions.style.display = "grid";
+          cbm.style.display = "none";
+        } else {
+          dimensions.style.display = "none";
+          cbm.style.display = "block";
+        }
+
+        updateCalculation();
+      }
+
+      // 更新偏遠地區費率
+      function updateRemoteAreaRate() {
+        const select = document.getElementById("deliveryLocation");
+        const rate = parseFloat(select.value) || 0;
+        const info = document.getElementById("remoteAreaInfo");
+        const tag = document.getElementById("remoteAreaTag");
+        const text = document.getElementById("remoteAreaText");
+
+        if (rate > 0) {
+          info.style.display = "block";
+
+          if (rate === 0.3) {
+            tag.className = "remote-tag remote-high";
+            tag.textContent = "離島地區";
+            text.textContent = `運費加成 ${(rate * 100).toFixed(0)}%`;
+          } else if (rate === 0.2) {
+            tag.className = "remote-tag remote-medium";
+            tag.textContent = "偏遠地區";
+            text.textContent = `運費加成 ${(rate * 100).toFixed(0)}%`;
+          } else if (rate === 0.1) {
+            tag.className = "remote-tag remote-low";
+            tag.textContent = "偏遠地區";
+            text.textContent = `運費加成 ${(rate * 100).toFixed(0)}%`;
+          }
+        } else {
+          info.style.display = "none";
+        }
+
+        updateCalculation();
+      }
+
+      // 更新費用計算
+      function updateCalculation() {
+        const items = document.querySelectorAll(".item-container");
+        let totalVolume = 0;
+        let baseFreight = 0;
+        let overweightFee = 0;
+        let oversizedFee = 0;
+        let allItemsData = [];
+
+        items.forEach((item, index) => {
+          const name =
+            item.querySelector(".item-name").value || `商品 #${index + 1}`;
+          const quantity =
+            parseInt(item.querySelector(".item-quantity").value) || 0;
+          const rateId = item.querySelector(".item-rate").value;
+          const weight =
+            parseFloat(item.querySelector(".item-weight").value) || 0;
+
+          if (!rateId || quantity === 0) return;
+
+          const rate = rateOptions.find((r) => r.id == rateId);
+          if (!rate) return;
+
+          // 計算材積
+          let volume = 0;
+          const calcMethod = item.querySelector(
+            `input[name^="calc-method"]:checked`
+          ).value;
+
+          if (calcMethod === "dimensions") {
+            const length =
+              parseFloat(item.querySelector(".item-length").value) || 0;
+            const width =
+              parseFloat(item.querySelector(".item-width").value) || 0;
+            const height =
+              parseFloat(item.querySelector(".item-height").value) || 0;
+
+            if (length && width && height) {
+              volume = ((length * width * height) / VOLUME_DIVISOR) * quantity;
+
+              // 檢查超長
+              const maxDimension = Math.max(length, width, height);
+              if (maxDimension > 200) {
+                oversizedFee += 1000 * quantity;
+              }
+            }
+          } else {
+            const cbm = parseFloat(item.querySelector(".item-cbm").value) || 0;
+            if (cbm) {
+              volume = cbm * CBM_TO_CAI_FACTOR * quantity;
+            }
+          }
+
+          // 檢查超重
+          if (weight > 50) {
+            overweightFee += 500 * quantity;
+          }
+
+          totalVolume += volume;
+          baseFreight += volume * rate.rate;
+
+          allItemsData.push({
+            name,
+            quantity,
+            volume,
+            weight,
+            rate: rate.rate,
+            rateName: rate.name,
+          });
+        });
+
+        // 偏遠地區加成
+        const remoteRate =
+          parseFloat(document.getElementById("deliveryLocation").value) || 0;
+        const remoteFee = baseFreight * remoteRate;
+
+        // 加值服務費
+        let serviceFee = 0;
+        if (document.getElementById("service-collect").checked)
+          serviceFee += 500;
+        if (document.getElementById("service-insurance").checked)
+          serviceFee += 300;
+        if (document.getElementById("service-urgent").checked)
+          serviceFee += 1000;
+        if (document.getElementById("service-install").checked)
+          serviceFee += 1500;
+
+        // 總計
+        const totalAmount =
+          baseFreight + remoteFee + overweightFee + oversizedFee + serviceFee;
+
+        // 更新顯示
+        document.getElementById(
+          "baseFreight"
+        ).textContent = `NT$ ${baseFreight.toLocaleString()}`;
+        document.getElementById(
+          "remoteFee"
+        ).textContent = `NT$ ${remoteFee.toLocaleString()}`;
+        document.getElementById(
+          "overweightFee"
+        ).textContent = `NT$ ${overweightFee.toLocaleString()}`;
+        document.getElementById(
+          "oversizedFee"
+        ).textContent = `NT$ ${oversizedFee.toLocaleString()}`;
+        document.getElementById(
+          "serviceFee"
+        ).textContent = `NT$ ${serviceFee.toLocaleString()}`;
+        document.getElementById(
+          "totalAmount"
+        ).textContent = `NT$ ${totalAmount.toLocaleString()}`;
+
+        return {
+          allItemsData,
+          totalVolume,
+          baseFreight,
+          remoteFee,
+          remoteRate,
+          overweightFee,
+          oversizedFee,
+          serviceFee,
+          totalAmount,
+        };
+      }
+
+      // 預覽訂單
+      function previewOrder() {
+        // 驗證必填欄位
+        if (!validateForm()) {
+          showAlert("error", "請填寫所有必填欄位");
+          return;
+        }
+
+        const calculation = updateCalculation();
+
+        // 建立預覽內容
+        const previewContent = `
+                <h2>訂單預覽</h2>
+                <h3>客戶資訊</h3>
+                <p>收件人：${document.getElementById("recipientName").value}</p>
+                <p>電話：${document.getElementById("phone").value}</p>
+                <p>地址：${document.getElementById("address").value}</p>
+                
+                <h3>商品明細</h3>
+                ${calculation.allItemsData
+                  .map(
+                    (item) => `
+                    <p>${item.name} x ${
+                      item.quantity
+                    } - 材積：${item.volume.toFixed(2)}材</p>
+                `
+                  )
+                  .join("")}
+                
+                <h3>費用總計</h3>
+                <p>總金額：NT$ ${calculation.totalAmount.toLocaleString()}</p>
+            `;
+
+        // 顯示預覽（可以用 modal 或其他方式）
+        if (
+          confirm(
+            "確認訂單資訊正確嗎？\n\n" + previewContent.replace(/<[^>]*>/g, "")
+          )
+        ) {
+          createOrder();
+        }
+      }
+
+      // 建立訂單
+      async function createOrder() {
+        if (!validateForm()) {
+          showAlert("error", "請填寫所有必填欄位");
+          return;
+        }
+
+        const loading = document.getElementById("loading");
+        loading.classList.add("active");
+
+        try {
+          const calculation = updateCalculation();
+
+          // 收集加值服務
+          const services = [];
+          if (document.getElementById("service-collect").checked)
+            services.push("代收貨款");
+          if (document.getElementById("service-insurance").checked)
+            services.push("貨物保險");
+          if (document.getElementById("service-urgent").checked)
+            services.push("急件處理");
+          if (document.getElementById("service-install").checked)
+            services.push("到府安裝");
+
+          const orderData = {
+            // 客戶資訊
+            recipientName: document.getElementById("recipientName").value,
+            phone: document.getElementById("phone").value,
+            email: document.getElementById("email").value || null,
+            lineNickname: document.getElementById("lineNickname").value || null,
+            address: document.getElementById("address").value,
+            idNumber: document.getElementById("idNumber").value || null,
+            taxId: document.getElementById("taxId").value || null,
+
+            // 計算結果
+            calculationResult: calculation,
+
+            // 加值服務
+            additionalServices: services.length > 0 ? services : null,
+            serviceNote: document.getElementById("serviceNote").value || null,
+
+            // 訂單設定
+            status: document.getElementById("orderStatus").value,
+            paymentStatus: document.getElementById("paymentStatus").value,
+            internalNote: document.getElementById("internalNote").value || null,
+
+            // 標記為員工建立
+            createdBy: "STAFF",
+            shareEnabled: true,
+          };
+
+          const token = localStorage.getItem("operatorToken");
+          const response = await fetch("/api/admin/orders/manual", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(orderData),
+          });
+
+          if (!response.ok) {
+            throw new Error("建立訂單失敗");
+          }
+
+          const result = await response.json();
+          currentOrder = result;
+
+          // 顯示分享區塊
+          const shareUrl = `${window.location.origin}/order-share/${result.shareToken}`;
+          document.getElementById("shareUrl").value = shareUrl;
+          document.getElementById("shareSection").classList.add("active");
+
+          showAlert("success", "訂單建立成功！");
+
+          // 捲動到分享區塊
+          document
+            .getElementById("shareSection")
+            .scrollIntoView({ behavior: "smooth" });
+        } catch (error) {
+          console.error("建立訂單錯誤:", error);
+          showAlert("error", "建立訂單失敗，請稍後再試");
+        } finally {
+          loading.classList.remove("active");
+        }
+      }
+
+      // 驗證表單
+      function validateForm() {
+        const required = [
+          "recipientName",
+          "phone",
+          "address",
+          "deliveryLocation",
+        ];
+
+        for (const field of required) {
+          const value = document.getElementById(field).value;
+          if (!value || value.trim() === "") {
+            document.getElementById(field).focus();
+            return false;
+          }
+        }
+
+        // 檢查至少有一個商品
+        const items = document.querySelectorAll(".item-container");
+        let hasValidItem = false;
+
+        items.forEach((item) => {
+          const name = item.querySelector(".item-name").value;
+          const rate = item.querySelector(".item-rate").value;
+          if (name && rate) {
+            hasValidItem = true;
+          }
+        });
+
+        if (!hasValidItem) {
+          showAlert("error", "請至少新增一個商品");
+          return false;
+        }
+
+        return true;
+      }
+
+      // 複製分享連結
+      function copyShareUrl() {
+        const input = document.getElementById("shareUrl");
+        input.select();
+        document.execCommand("copy");
+
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = "已複製！";
+        btn.style.background = "#28a745";
+
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = "";
+        }, 2000);
+      }
+
+      // 查看訂單
+      function viewOrder() {
+        if (currentOrder) {
+          window.open(`/order-share/${currentOrder.shareToken}`, "_blank");
+        }
+      }
+
+      // 建立新訂單
+      function createNewOrder() {
+        if (confirm("確定要建立新訂單嗎？目前的資料將會清除。")) {
+          resetForm();
+          document.getElementById("shareSection").classList.remove("active");
+        }
+      }
+
+      // 重置表單
+      function resetForm() {
+        if (!confirm("確定要清除所有資料嗎？")) {
+          return;
+        }
+
+        document.querySelectorAll(".form-control").forEach((input) => {
+          if (input.type === "checkbox") {
+            input.checked = false;
+          } else if (input.tagName === "SELECT") {
+            input.selectedIndex = 0;
+          } else {
+            input.value = "";
+          }
+        });
+
+        // 重置商品項目
+        document.getElementById("itemsContainer").innerHTML = "";
+        itemCount = 0;
+        addItem();
+
+        // 重置計算
+        updateCalculation();
+
+        // 隱藏分享區塊
+        document.getElementById("shareSection").classList.remove("active");
+
+        showAlert("success", "表單已清除");
+      }
+
+      // 顯示提示訊息
+      function showAlert(type, message) {
+        const alert = document.getElementById("alert");
+        alert.className = `alert alert-${type} active`;
+        alert.textContent = message;
+
+        setTimeout(() => {
+          alert.classList.remove("active");
+        }, 5000);
+      }
+    </script>
+  </body>
+</html>

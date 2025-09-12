@@ -35,7 +35,7 @@ model User {
   
   // 關聯
   assignedOrders      ShipmentOrder[]      @relation("AssignedOrders")
-  operationLogs       OrderOperationLog[]  @relation("UserOperations")  // 新增
+  operationLogs       OrderOperationLog[]  @relation("UserOperations")
 
   @@index([username])
   @@index([role])
@@ -124,8 +124,16 @@ model ShipmentOrder {
   totalAmount       Float?
   currency          String    @default("TWD")
   
-  // 訂單狀態
+  // 訂單狀態（支援新狀態）
   status            String    @default("NEEDS_PURCHASE")
+  // 可能的值：QUOTED, PENDING, CONFIRMED, PROCESSING, NEEDS_PURCHASE, PURCHASED, 
+  // IN_WAREHOUSE, SHIPPED, IN_CUSTOMS, DELIVERY_COMPLETE, CANCELLED
+  
+  // ===== 手動建立訂單新增欄位 =====
+  source            String    @default("CUSTOMER") // CUSTOMER, STAFF, ADMIN
+  serviceNote       String?   // 加值服務備註
+  shareEnabled      Boolean   @default(true) // 是否啟用分享連結
+  // ===== 結束新增欄位 =====
   
   // 加值服務
   additionalServices String?
@@ -133,7 +141,6 @@ model ShipmentOrder {
   serviceQuoteAmount Float?
   serviceCompleted   Boolean  @default(false)
   
-  // ===== 新增：包裹轉訂單相關欄位 =====
   // 來源包裹
   sourceParcelId    String?   @unique
   sourceParcel      ParcelNotification? @relation("ParcelToOrder", fields: [sourceParcelId], references: [id])
@@ -162,16 +169,15 @@ model ShipmentOrder {
   shareViewCount    Int       @default(0)
   shareLastViewedAt DateTime? // 最後查看時間
   
-  // ===== 結束新增區塊 =====
-  
   // 物流資訊
   trackingNumber    String?
   shippingMethod    String?
   estimatedDelivery DateTime?
   actualDelivery    DateTime?
   
-  // 付款資訊
-  paymentStatus     String    @default("PENDING")
+  // 付款資訊（確保支援新的付款狀態）
+  paymentStatus     String    @default("UNPAID")
+  // 可能的值：UNPAID, DEPOSIT, PAID, REFUNDING, REFUNDED
   paymentMethod     String?
   paidAt            DateTime?
   invoiceNumber     String?
@@ -193,7 +199,7 @@ model ShipmentOrder {
   customerId        String?
   customer          Customer? @relation("CustomerOrders", fields: [customerId], references: [id])
   
-  // 新增：操作記錄關聯
+  // 操作記錄關聯
   operationLogs     OrderOperationLog[] @relation("OrderOperations")
 
   @@index([customerId])
@@ -202,8 +208,10 @@ model ShipmentOrder {
   @@index([paymentStatus])
   @@index([createdAt])
   @@index([trackingNumber])
-  @@index([shareToken])        // 新增索引
-  @@index([sourceParcelId])     // 新增索引
+  @@index([shareToken])
+  @@index([sourceParcelId])
+  @@index([source])           // 新增索引
+  @@index([shareEnabled])     // 新增索引
   @@map("shipment_orders")
 }
 
@@ -239,6 +247,7 @@ model CalculationQuote {
 model ParcelNotification {
   id                String    @id @default(cuid())
   convertedOrderId  String?
+  
   // 包裹資訊
   trackingNumber    String
   logisticsCompany  String?
@@ -252,7 +261,6 @@ model ParcelNotification {
   // 狀態
   status            String    @default("PENDING")
   
-  // ===== 新增：訂單轉換相關 =====
   // 轉換狀態
   isConverted       Boolean   @default(false)  // 是否已轉換為訂單
   convertedAt       DateTime? // 轉換時間
@@ -260,8 +268,6 @@ model ParcelNotification {
   
   // 關聯到正式訂單（反向關聯）
   convertedOrder    ShipmentOrder? @relation("ParcelToOrder")
-  
-  // ===== 結束新增區塊 =====
   
   // 台灣收件資料
   taiwanDelivery    String?
@@ -300,11 +306,11 @@ model ParcelNotification {
   @@index([guestEmail])
   @@index([queryCode])
   @@index([createdAt])
-  @@index([isConverted])      // 新增索引
+  @@index([isConverted])
   @@map("parcel_notifications")
 }
 
-// ===== 新增：訂單操作記錄表 =====
+// ===== 訂單操作記錄表 =====
 model OrderOperationLog {
   id              String    @id @default(cuid())
   
@@ -315,7 +321,9 @@ model OrderOperationLog {
   operator        User @relation("UserOperations", fields: [operatorId], references: [id])
   
   // 操作資訊
-  action          String    // CONVERT_FROM_PARCEL, UPDATE_DIMENSION, UPDATE_PRICE, UPDATE_PROTECTION, GENERATE_SHARE, UPDATE_STATUS
+  action          String    
+  // 可能的值：CONVERT_FROM_PARCEL, UPDATE_DIMENSION, UPDATE_PRICE, UPDATE_PROTECTION, 
+  // GENERATE_SHARE, UPDATE_STATUS, CREATE_MANUAL_ORDER, UPDATE_MANUAL_ORDER
   previousValue   String?   // JSON：操作前的值
   newValue        String?   // JSON：操作後的值
   details         String?   // JSON：額外詳情
@@ -333,4 +341,26 @@ model OrderOperationLog {
   @@index([action])
   @@index([createdAt])
   @@map("order_operation_logs")
+}
+
+// ===== 審計日誌表（選用）=====
+model AuditLog {
+  id              String    @id @default(cuid())
+  
+  action          String    // 動作類型
+  targetType      String    // 目標類型（CUSTOMER, ORDER, USER等）
+  targetId        String    // 目標ID
+  performedById   String?   // 執行者ID
+  details         String?   // JSON：詳細資訊
+  ipAddress       String?   // IP地址
+  userAgent       String?   // 瀏覽器資訊
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([action])
+  @@index([targetType])
+  @@index([targetId])
+  @@index([performedById])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
