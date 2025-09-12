@@ -1,4 +1,4 @@
-// order-share.js - 訂單分享頁面邏輯
+// order-share.js - 訂單分享頁面邏輯（優化版）
 (function () {
   "use strict";
 
@@ -10,20 +10,17 @@
 
   // 銀行資訊配置（可依需求調整）
   const BANK_INFO = {
-    bankName: "台灣銀行",
-    bankCode: "004",
-    accountNumber: "123-456-789-000",
-    accountName: "小跑豬運輸有限公司",
+    bankName: "第一銀行",
+    bankCode: "007",
+    accountNumber: "60110066477",
+    accountName: "跑得快國際貿易有限公司",
     swiftCode: "BKTWTWTP",
   };
 
   // 聯絡資訊配置
   const CONTACT_INFO = {
-    phone: "0800-123-456",
     line: "@runpiggy",
-    email: "service@runpiggy.com",
     website: "https://www.runpiggy.com",
-    address: "台北市信義區信義路五段7號",
   };
 
   // 狀態對應表
@@ -36,6 +33,7 @@
     SHIPPED: { text: "已發貨", color: "#9c27b0", icon: "🚚" },
     IN_CUSTOMS: { text: "清關中", color: "#ff5722", icon: "🛃" },
     DELIVERY_COMPLETE: { text: "派送完成", color: "#00bcd4", icon: "✨" },
+    COMPLETED: { text: "已完成", color: "#4caf50", icon: "✅" },
     // 付款狀態
     PENDING: { text: "待付款", color: "#ff9800", icon: "⏳" },
     PAID: { text: "已付款", color: "#4caf50", icon: "✅" },
@@ -272,7 +270,8 @@
 
       const data = await response.json();
 
-      if (!data.success || !data.order) {
+      // 修正：不檢查 success 欄位，直接檢查 order
+      if (!data.order) {
         throw new Error("訂單資料格式錯誤");
       }
 
@@ -310,8 +309,8 @@
     // 商品明細
     displayOrderItems(order);
 
-    // 價格明細
-    displayPriceDetails(order);
+    // 價格明細（增強版）
+    displayEnhancedPriceDetails(order);
 
     // 付款資訊
     displayPaymentInfo(order);
@@ -473,7 +472,9 @@
     return `
       <div class="item-card">
         <div class="item-header">
-          <span class="item-name">${escapeHtml(item.itemName || "商品")}</span>
+          <span class="item-name">${escapeHtml(
+            item.itemName || item.name || "商品"
+          )}</span>
           <span class="item-quantity">數量: ${item.quantity || 1}</span>
         </div>
         <div class="item-details">
@@ -502,57 +503,320 @@
     `;
   }
 
-  function displayPriceDetails(order) {
-    let shipping = 0;
-    let service = 0;
-    let protection = 0;
-    let other = 0;
-    let total = order.finalTotalAmount || order.totalAmount || 0;
+  // ===== 增強版價格明細顯示 =====
+  function displayEnhancedPriceDetails(order) {
+    let breakdown = {
+      shipping: 0,
+      service: 0,
+      protection: 0,
+      overweight: 0,
+      oversized: 0,
+      remote: 0,
+      other: 0,
+      total: order.finalTotalAmount || order.totalAmount || 0,
+    };
 
-    // 解析價格資料
+    // 修正：正確解析 finalQuoteData 欄位名稱
     if (order.finalQuoteData) {
-      shipping = order.finalQuoteData.shipping || 0;
-      service = order.finalQuoteData.service || 0;
-      protection = order.finalQuoteData.protection || 0;
-      other = order.finalQuoteData.other || 0;
-    } else if (order.calculationResult) {
-      const result = order.calculationResult;
-      shipping = result.finalSeaFreightCost || result.finalTotal || 0;
+      // 對應正確的欄位名稱
+      breakdown.shipping =
+        order.finalQuoteData.shippingFee || order.finalQuoteData.shipping || 0;
+      breakdown.service =
+        order.finalQuoteData.serviceFee || order.finalQuoteData.service || 0;
+      breakdown.protection =
+        order.finalQuoteData.protectionFee ||
+        order.finalQuoteData.protection ||
+        0;
+      breakdown.other =
+        order.finalQuoteData.otherFee || order.finalQuoteData.other || 0;
 
-      if (result.remoteFee) {
-        other = result.remoteFee;
+      // 顯示傢俱類型（如果有）
+      if (order.finalQuoteData.furnitureType) {
+        displayFurnitureType(order.finalQuoteData.furnitureType);
+      }
+
+      // 顯示計算時間（如果有）
+      if (order.finalQuoteData.calculatedAt) {
+        displayCalculationTime(order.finalQuoteData.calculatedAt);
+      }
+    }
+
+    // 解析 calculationResult 獲取更多細節
+    if (order.calculationResult) {
+      const result = order.calculationResult;
+
+      // 如果 finalQuoteData 沒有數據，從 calculationResult 取值
+      if (!order.finalQuoteData || breakdown.shipping === 0) {
+        breakdown.shipping =
+          result.finalSeaFreightCost ||
+          result.finalTotal ||
+          result.baseFreight ||
+          0;
+        breakdown.remote = result.remoteFee || 0;
+      }
+
+      // 檢查超重費
+      if (result.totalOverweightFee && result.totalOverweightFee > 0) {
+        breakdown.overweight = result.totalOverweightFee;
+      }
+
+      // 檢查超大費
+      if (result.totalOversizedFee && result.totalOversizedFee > 0) {
+        breakdown.oversized = result.totalOversizedFee;
+      }
+
+      // 顯示計算明細
+      if (result.allItemsData && result.allItemsData.length > 0) {
+        displayCalculationDetails(result);
+      }
+    }
+
+    // 從訂單本身獲取保護費
+    if (order.protectionPrice && order.protectionPrice > 0) {
+      breakdown.protection = order.protectionPrice;
+    }
+
+    // 從 additionalServices 獲取額外服務資訊
+    if (order.additionalServices) {
+      if (
+        order.additionalServices.protection &&
+        order.additionalServices.protection.needed
+      ) {
+        breakdown.protection =
+          order.additionalServices.protection.price || breakdown.protection;
       }
     }
 
     // 加值服務費用
     if (order.serviceQuoteAmount) {
-      service += order.serviceQuoteAmount;
+      breakdown.service += order.serviceQuoteAmount;
     }
 
-    // 加強保護費用
-    if (order.protectionPrice) {
-      protection = order.protectionPrice;
+    // 更新顯示 - 基本費用
+    updatePriceDisplay("shipping-fee", breakdown.shipping);
+    updatePriceDisplay("service-fee", breakdown.service);
+
+    // 條件顯示 - 加強保護費
+    if (breakdown.protection > 0) {
+      showPriceRow("protection-row", "protection-fee", breakdown.protection);
+      // 如果有保護說明，顯示提示
+      if (order.protectionNote) {
+        addProtectionTooltip(order.protectionNote);
+      }
     }
 
-    // 更新顯示
-    updatePriceDisplay("shipping-fee", shipping);
-    updatePriceDisplay("service-fee", service);
-
-    // 條件顯示
-    if (protection > 0) {
-      showPriceRow("protection-row", "protection-fee", protection);
+    // 條件顯示 - 超重費
+    if (breakdown.overweight > 0) {
+      showPriceRow("overweight-row", "overweight-fee", breakdown.overweight);
     }
 
-    if (other > 0) {
-      showPriceRow("other-row", "other-fee", other);
+    // 條件顯示 - 超大費
+    if (breakdown.oversized > 0) {
+      showPriceRow("oversized-row", "oversized-fee", breakdown.oversized);
+    }
+
+    // 條件顯示 - 偏遠地區費
+    if (breakdown.remote > 0) {
+      showPriceRow("remote-row", "remote-fee", breakdown.remote);
+    }
+
+    // 條件顯示 - 其他費用
+    if (breakdown.other > 0) {
+      showPriceRow("other-row", "other-fee", breakdown.other);
     }
 
     // 總計
-    updatePriceDisplay("total-amount", total);
-    updatePriceDisplay("payment-amount", total);
+    updatePriceDisplay("total-amount", breakdown.total);
+    updatePriceDisplay("payment-amount", breakdown.total);
 
     // 儲存金額供複製使用
-    window.orderTotalAmount = total;
+    window.orderTotalAmount = breakdown.total;
+
+    // 顯示費用明細摘要
+    displayPriceSummary(breakdown);
+  }
+
+  // 顯示傢俱類型
+  function displayFurnitureType(type) {
+    const typeMap = {
+      general: "一般傢俱",
+      special_a: "特殊傢俱A",
+      special_b: "特殊傢俱B",
+      special_c: "特殊傢俱C",
+    };
+
+    const displayText = typeMap[type] || type;
+    const calcMethodEl = document.getElementById("calc-method");
+    if (calcMethodEl) {
+      calcMethodEl.textContent = `傢俱類型: ${displayText}`;
+      const calcRow = document.getElementById("calc-method-row");
+      if (calcRow) {
+        calcRow.style.display = "flex";
+      }
+    }
+  }
+
+  // 顯示計算時間
+  function displayCalculationTime(time) {
+    const calcTimeEl = document.getElementById("calc-time");
+    if (calcTimeEl) {
+      calcTimeEl.textContent = `計算時間: ${formatDateTime(time)}`;
+    }
+  }
+
+  // 顯示計算明細
+  function displayCalculationDetails(result) {
+    const detailsContainer = document.getElementById("calculation-details");
+    const contentDiv = document.getElementById("calc-details-content");
+
+    if (!detailsContainer || !contentDiv) return;
+    if (!result.allItemsData || result.allItemsData.length === 0) return;
+
+    detailsContainer.style.display = "block";
+
+    let html = '<div class="calc-details-wrapper">';
+
+    // 顯示每個商品的明細
+    result.allItemsData.forEach((item, index) => {
+      html += `
+        <div class="calc-item">
+          <div class="calc-item-header">
+            <strong>${
+              item.itemName || item.name || `商品 ${index + 1}`
+            }</strong>
+            <span class="calc-item-quantity">× ${item.quantity || 1}</span>
+          </div>
+          <div class="calc-item-details">
+            <div class="calc-detail-row">
+              <span class="calc-label">重量:</span>
+              <span class="calc-value">${item.weight || 0} kg</span>
+            </div>
+            <div class="calc-detail-row">
+              <span class="calc-label">尺寸:</span>
+              <span class="calc-value">${item.length || 0}×${item.width || 0}×${
+        item.height || 0
+      } cm</span>
+            </div>
+            ${
+              item.cbm
+                ? `
+              <div class="calc-detail-row">
+                <span class="calc-label">材積:</span>
+                <span class="calc-value">${parseFloat(item.cbm).toFixed(
+                  4
+                )} m³</span>
+              </div>
+            `
+                : ""
+            }
+            ${
+              item.singleVolume
+                ? `
+              <div class="calc-detail-row">
+                <span class="calc-label">體積:</span>
+                <span class="calc-value">${item.singleVolume} 材</span>
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+    });
+
+    // 顯示總計
+    if (result.totalCbm || result.totalShipmentVolume) {
+      html += `
+        <div class="calc-item calc-total">
+          <div class="calc-item-header">
+            <strong>📊 總計算結果</strong>
+          </div>
+          <div class="calc-item-details">
+            ${
+              result.totalCbm
+                ? `
+              <div class="calc-detail-row">
+                <span class="calc-label">總材積:</span>
+                <span class="calc-value">${parseFloat(result.totalCbm).toFixed(
+                  4
+                )} m³</span>
+              </div>
+            `
+                : ""
+            }
+            ${
+              result.totalShipmentVolume
+                ? `
+              <div class="calc-detail-row">
+                <span class="calc-label">總體積:</span>
+                <span class="calc-value">${result.totalShipmentVolume.toFixed(
+                  2
+                )} 材</span>
+              </div>
+            `
+                : ""
+            }
+            ${
+              result.remoteAreaRate
+                ? `
+              <div class="calc-detail-row">
+                <span class="calc-label">偏遠地區費率:</span>
+                <span class="calc-value">${result.remoteAreaRate}%</span>
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+    }
+
+    html += "</div>";
+    contentDiv.innerHTML = html;
+  }
+
+  // 顯示費用摘要
+  function displayPriceSummary(breakdown) {
+    // 計算有多少項附加費用
+    let additionalCount = 0;
+    if (breakdown.protection > 0) additionalCount++;
+    if (breakdown.overweight > 0) additionalCount++;
+    if (breakdown.oversized > 0) additionalCount++;
+    if (breakdown.remote > 0) additionalCount++;
+    if (breakdown.other > 0) additionalCount++;
+
+    // 如果有附加費用，顯示摘要
+    if (additionalCount > 0) {
+      const summaryEl = document.getElementById("price-summary");
+      if (summaryEl) {
+        summaryEl.innerHTML = `
+          <div style="margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 6px; font-size: 13px; color: #666;">
+            <span>💡 費用包含：基本運費 + 服務費${
+              additionalCount > 0 ? ` + ${additionalCount}項附加費用` : ""
+            }</span>
+          </div>
+        `;
+      }
+    }
+  }
+
+  // 添加保護費提示
+  function addProtectionTooltip(note) {
+    const protectionLabel = document.querySelector(
+      "#protection-row .price-label"
+    );
+    if (protectionLabel && note) {
+      protectionLabel.innerHTML = `
+        加強保護費
+        <span class="price-tooltip" title="${escapeHtml(note)}">ℹ️</span>
+      `;
+    }
+  }
+
+  // 原有的 displayPriceDetails 函數（保留以確保相容性）
+  function displayPriceDetails(order) {
+    // 呼叫增強版函數
+    displayEnhancedPriceDetails(order);
   }
 
   function displayPaymentInfo(order) {
@@ -1038,6 +1302,75 @@
         .pulse-animation {
           animation: pulse 2s infinite;
         }
+        
+        /* 計算明細樣式 */
+        .calc-details-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        
+        .calc-item {
+          background: white;
+          padding: 12px;
+          border-radius: 6px;
+          border: 1px solid #e0e0e0;
+        }
+        
+        .calc-item.calc-total {
+          background: #fff3e0;
+          border-color: #ffb74d;
+        }
+        
+        .calc-item-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+          font-weight: 600;
+          color: #333;
+        }
+        
+        .calc-item-quantity {
+          background: #1a73e8;
+          color: white;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+        }
+        
+        .calc-item-details {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 8px;
+        }
+        
+        .calc-detail-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 13px;
+        }
+        
+        .calc-label {
+          color: #666;
+        }
+        
+        .calc-value {
+          color: #333;
+          font-weight: 500;
+        }
+        
+        /* 價格提示樣式 */
+        .price-tooltip {
+          display: inline-block;
+          margin-left: 5px;
+          cursor: help;
+          color: #1a73e8;
+        }
+        
+        .price-tooltip:hover {
+          color: #1557b0;
+        }
       `;
       document.head.appendChild(style);
     }
@@ -1083,5 +1416,6 @@
     showToast: showToast,
     formatCurrency: formatCurrency,
     formatDateTime: formatDateTime,
+    displayEnhancedPriceDetails: displayEnhancedPriceDetails,
   };
 })();
