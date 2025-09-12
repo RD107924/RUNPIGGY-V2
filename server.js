@@ -63,7 +63,7 @@ try {
       const { parcelId } = req.params;
 
       // 使用 Prisma 查詢包裹（如果有資料庫）
-      const parcel = await prisma.parcel.findUnique({
+      const parcel = await prisma.parcelNotification.findUnique({
         where: { id: parcelId },
         include: {
           customer: true,
@@ -118,7 +118,7 @@ try {
       }
 
       // 查詢包裹
-      const parcel = await prisma.parcel.findUnique({
+      const parcel = await prisma.parcelNotification.findUnique({
         where: { id: parcelId },
         include: { customer: true },
       });

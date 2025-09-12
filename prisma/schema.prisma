@@ -238,7 +238,7 @@ model CalculationQuote {
 // ===== 包裹預報資料模型（增強版）=====
 model ParcelNotification {
   id                String    @id @default(cuid())
-  
+  convertedOrderId  String?
   // 包裹資訊
   trackingNumber    String
   logisticsCompany  String?
