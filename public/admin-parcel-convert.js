@@ -466,7 +466,7 @@
           <img src="${fullUrl}" 
                alt="商品圖片" 
                onclick="viewImage('${fullUrl}')"
-               onerror="this.src='/assets/no-image.png'"
+               onerror="this.style.display='none'"
                title="點擊查看大圖">
         `;
         })
@@ -588,12 +588,6 @@
       protectionCheckbox.addEventListener("change", handleProtectionToggle);
     }
 
-    // 轉換按鈕 - 移除這裡的事件監聽器，因為會由 onclick 處理
-    // const convertBtn = document.getElementById("btn-convert");
-    // if (convertBtn) {
-    //   convertBtn.addEventListener("click", handleConvertToOrder);
-    // }
-
     // 重置按鈕
     const resetBtn = document.querySelector('[onclick="resetForm()"]');
     if (resetBtn) {
@@ -665,7 +659,8 @@
       ) {
         showAlert(
           "warning",
-          `注意：單邊超過 ${OVERSIZED_LIMIT}cm，將收取超長費 NT$${OVERSIZED_FEE}`
+          `注意：單邊超過 ${OVERSIZED_LIMIT}cm，將收取超長費 NT$${OVERSIZED_FEE}`,
+          3000
         );
       }
     } else {
@@ -821,8 +816,10 @@
     updateButtonState(convertBtn, true, "轉換中...");
 
     try {
-      // 收集表單資料
+      // 收集表單資料（簡化版本）
       const formData = collectFormData();
+
+      console.log("準備發送的資料:", formData);
 
       // 發送轉換請求
       const response = await fetch(`${API_BASE}/convert/${parcelId}`, {
@@ -832,8 +829,15 @@
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "轉換失敗");
+        let errorMessage = "轉換失敗";
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+          console.error("後端返回錯誤:", error);
+        } catch (e) {
+          console.error("無法解析錯誤回應:", e);
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -855,7 +859,7 @@
       console.log("訂單轉換成功:", result);
     } catch (error) {
       console.error("轉換失敗:", error);
-      showAlert("error", error.message || "網路錯誤，請稍後再試");
+      showAlert("error", `轉換失敗：${error.message}`);
     } finally {
       isConverting = false;
       updateButtonState(convertBtn, false, "確認轉換為訂單");
@@ -867,9 +871,8 @@
     const length = parseFloat(document.getElementById("actual-length").value);
     const width = parseFloat(document.getElementById("actual-width").value);
     const height = parseFloat(document.getElementById("actual-height").value);
-    const shippingFee = parseFloat(
-      document.getElementById("shipping-fee").value
-    );
+    const shippingFee =
+      parseFloat(document.getElementById("shipping-fee").value) || 0;
     const serviceFee =
       parseFloat(document.getElementById("service-fee").value) || 0;
     const otherFee =
@@ -877,34 +880,15 @@
     const protectionPrice =
       parseFloat(document.getElementById("protection-price").value) || 0;
 
-    // 新增：收集家具類型和配送地區
-    const furnitureTypeEl = document.getElementById("furniture-type");
-    const deliveryLocationEl = document.getElementById("delivery-location");
-
-    // 計算材積（向上取整）
-    const volumeRaw = (length * width * height) / VOLUME_DIVISOR;
-    const volume = Math.ceil(volumeRaw);
-    const cbm = volume / CBM_TO_CAI_FACTOR;
-
-    const calculationData = {
-      weight: weight,
-      length: length,
-      width: width,
-      height: height,
-      furnitureType: furnitureTypeEl ? furnitureTypeEl.value : "general",
-      deliveryLocation: deliveryLocationEl ? deliveryLocationEl.value : "0",
-      volume: volume,
-      cbm: cbm.toFixed(4),
-    };
-
-    return {
+    // 基本的資料結構，移除可能造成問題的欄位
+    const formData = {
       actualWeight: weight,
       actualLength: length,
       actualWidth: width,
       actualHeight: height,
       protectionNeeded: document.getElementById("protection-needed").checked,
       protectionPrice: protectionPrice,
-      protectionNote: document.getElementById("protection-note").value,
+      protectionNote: document.getElementById("protection-note").value || "",
       finalQuoteData: {
         shipping: shippingFee,
         service: serviceFee,
@@ -912,10 +896,21 @@
         other: otherFee,
       },
       finalTotalAmount: shippingFee + serviceFee + protectionPrice + otherFee,
-      quoteNote: document.getElementById("quote-note").value,
-      additionalServices: collectAdditionalServices(),
-      calculationData: calculationData, // 新增：包含計算相關資料
+      quoteNote: document.getElementById("quote-note").value || "",
     };
+
+    // 只有在元素存在時才加入這些欄位
+    const furnitureTypeEl = document.getElementById("furniture-type");
+    if (furnitureTypeEl) {
+      formData.furnitureType = furnitureTypeEl.value;
+    }
+
+    const deliveryLocationEl = document.getElementById("delivery-location");
+    if (deliveryLocationEl) {
+      formData.deliveryLocation = deliveryLocationEl.value;
+    }
+
+    return formData;
   }
 
   function collectAdditionalServices() {
@@ -982,6 +977,8 @@
           input.value = "";
         } else if (input.type === "textarea") {
           input.value = "";
+        } else if (input.tagName === "SELECT") {
+          input.selectedIndex = 0;
         } else {
           input.value = "";
         }
