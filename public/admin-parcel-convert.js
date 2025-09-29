@@ -422,25 +422,25 @@
     });
   }
 
-// ===== 計算函數 =====
-function calculateCBM() {
-  const length =
-    parseFloat(document.getElementById("actual-length").value) || 0;
-  const width =
-    parseFloat(document.getElementById("actual-width").value) || 0;
-  const height =
-    parseFloat(document.getElementById("actual-height").value) || 0;
-  const cbmEl = document.getElementById("actual-cbm");
-  
-  if (!cbmEl) return;
-  
-  if (length > 0 && width > 0 && height > 0) {
-    const volume = (length * width * height) / 28317;
-    cbmEl.value = volume.toFixed(2) + " 材";  // ✅ 修正：使用 volume 變數
-  } else {
-    cbmEl.value = "";
+  // ===== 計算函數 =====
+  function calculateCBM() {
+    const length =
+      parseFloat(document.getElementById("actual-length").value) || 0;
+    const width =
+      parseFloat(document.getElementById("actual-width").value) || 0;
+    const height =
+      parseFloat(document.getElementById("actual-height").value) || 0;
+    const cbmEl = document.getElementById("actual-cbm");
+    
+    if (!cbmEl) return;
+    
+    if (length > 0 && width > 0 && height > 0) {
+      const volume = (length * width * height) / VOLUME_DIVISOR;
+      cbmEl.value = volume.toFixed(2) + " 材";
+    } else {
+      cbmEl.value = "";
+    }
   }
-}
 
   function calculateShippingFee() {
     const weight =
@@ -456,30 +456,54 @@ function calculateCBM() {
       return;
     }
 
-    const furnitureType = "general";
+    // 獲取家具類型
+    const furnitureTypeEl = document.getElementById("furniture-type");
+    const furnitureType = furnitureTypeEl ? furnitureTypeEl.value : "general";
     const rateInfo = rates[furnitureType];
 
-    const singleVolume = Math.ceil((length * width * height) / VOLUME_DIVISOR);
-    const cbm = singleVolume / CBM_TO_CAI_FACTOR;
+    // 計算材積（才）- 修正：直接計算材積，不需要 Math.ceil
+    const singleVolume = (length * width * height) / VOLUME_DIVISOR;
 
+    // 計算費用
     const volumeCost = singleVolume * rateInfo.volumeRate;
     const weightCost = weight * rateInfo.weightRate;
+    
+    // 取較高者作為基本運費
     let baseFreight = Math.max(volumeCost, weightCost);
+    
+    // 確保不低於最低消費
     baseFreight = Math.max(baseFreight, MINIMUM_CHARGE);
 
+    // 計算額外費用
     let additionalFees = 0;
 
+    // 超重費
     if (weight > OVERWEIGHT_LIMIT) {
       additionalFees += OVERWEIGHT_FEE;
     }
 
+    // 超長費
     const maxDimension = Math.max(length, width, height);
     if (maxDimension > OVERSIZED_LIMIT) {
       additionalFees += OVERSIZED_FEE;
     }
 
-    const totalShippingFee = baseFreight + additionalFees;
+    // 獲取偏遠地區費用
+    const deliveryLocationEl = document.getElementById("delivery-location");
+    let remoteFee = 0;
+    if (deliveryLocationEl) {
+      const remoteRate = parseFloat(deliveryLocationEl.value) || 0;
+      if (remoteRate > 0) {
+        // 偏遠地區費用 = 材積轉立方米 × 費率
+        const cbm = singleVolume / CBM_TO_CAI_FACTOR;
+        remoteFee = cbm * remoteRate;
+      }
+    }
 
+    // 計算總運費
+    const totalShippingFee = baseFreight + additionalFees + remoteFee;
+
+    // 更新運費欄位
     const shippingFeeInput = document.getElementById("shipping-fee");
     if (shippingFeeInput) {
       shippingFeeInput.value = Math.round(totalShippingFee);
