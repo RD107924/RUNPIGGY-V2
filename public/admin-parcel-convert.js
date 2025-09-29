@@ -422,25 +422,25 @@
     });
   }
 
-  // ===== 計算函數 =====
-  function calculateCBM() {
-    const length =
-      parseFloat(document.getElementById("actual-length").value) || 0;
-    const width =
-      parseFloat(document.getElementById("actual-width").value) || 0;
-    const height =
-      parseFloat(document.getElementById("actual-height").value) || 0;
-    const cbmEl = document.getElementById("actual-cbm");
-
-    if (!cbmEl) return;
-
-    if (length > 0 && width > 0 && height > 0) {
-      const volume = (length * width * height) / 28317;
-      cbmEl.value = cbm.toFixed(4) + " 材";
-    } else {
-      cbmEl.value = "";
-    }
+// ===== 計算函數 =====
+function calculateCBM() {
+  const length =
+    parseFloat(document.getElementById("actual-length").value) || 0;
+  const width =
+    parseFloat(document.getElementById("actual-width").value) || 0;
+  const height =
+    parseFloat(document.getElementById("actual-height").value) || 0;
+  const cbmEl = document.getElementById("actual-cbm");
+  
+  if (!cbmEl) return;
+  
+  if (length > 0 && width > 0 && height > 0) {
+    const volume = (length * width * height) / 28317;
+    cbmEl.value = volume.toFixed(2) + " 材";  // ✅ 修正：使用 volume 變數
+  } else {
+    cbmEl.value = "";
   }
+}
 
   function calculateShippingFee() {
     const weight =
