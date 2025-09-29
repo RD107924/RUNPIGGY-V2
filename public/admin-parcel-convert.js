@@ -435,9 +435,8 @@
     if (!cbmEl) return;
 
     if (length > 0 && width > 0 && height > 0) {
-      const volume = (length * width * height) / VOLUME_DIVISOR;
-      const cbm = volume / CBM_TO_CAI_FACTOR;
-      cbmEl.value = cbm.toFixed(4) + " m³";
+      const volume = (length * width * height) / 28317;
+      cbmEl.value = cbm.toFixed(4) + " 材";
     } else {
       cbmEl.value = "";
     }
